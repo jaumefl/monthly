@@ -1,0 +1,13 @@
+# IDE
+.idea/
+
+# Bank data — never commit real exports
+data/
+*.xlsx
+*.xls
+*.csv
+
+# Allow anonymized test fixtures committed under src/test/resources
+!src/**/test/resources/**/*.xlsx
+!src/**/test/resources/**/*.xls
+!src/**/test/resources/**/*.csv
