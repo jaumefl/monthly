@@ -1,4 +1,4 @@
-package domain;
+package monthly.domain;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
