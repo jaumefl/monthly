@@ -12,6 +12,7 @@ dependencies {
     implementation("com.sparkjava:spark-core:2.9.4")
     implementation("org.apache.poi:poi-ooxml:5.2.5")
     implementation("org.slf4j:slf4j-simple:2.0.13") // Spark logs through SLF4J
+    implementation(libs.sqlite.jdbc)
 
     testImplementation(libs.groovy)
     testImplementation(libs.spock.core)
