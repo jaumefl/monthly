@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import monthly.db.Database;
 import monthly.domain.BankSource;
+import monthly.domain.MonthSummary;
 import monthly.parser.BankStatementParser;
 import monthly.parser.RevolutParser;
 import monthly.parser.SantanderParser;
@@ -36,6 +37,12 @@ public class App {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
             return repository.findByMonth(month);
+        }, json::writeValueAsString);
+
+        get("/api/months/:yearMonth/summary", (req, res) -> {
+            res.type("application/json");
+            YearMonth month = YearMonth.parse(req.params("yearMonth"));
+            return MonthSummary.of(month, repository.findByMonth(month));
         }, json::writeValueAsString);
 
         post("/api/imports/:bank", (req, res) -> {
