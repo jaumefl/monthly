@@ -11,4 +11,6 @@ public interface TransactionRepository {
     void saveAll(List<Transaction> transactions);
 
     void deleteBySourceAndMonth(BankSource source, YearMonth month);
+
+    List<Transaction> findByMonth(YearMonth month);
 }

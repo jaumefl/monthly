@@ -4,10 +4,14 @@ import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Transaction;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SqliteTransactionRepository implements TransactionRepository {
@@ -50,5 +54,32 @@ public class SqliteTransactionRepository implements TransactionRepository {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to delete transactions", e);
         }
+    }
+
+    @Override
+    public List<Transaction> findByMonth(YearMonth month) {
+        String sql = """
+            SELECT operation_date, description, amount, currency, source
+            FROM transactions
+            WHERE year_month = ?
+            """;
+        List<Transaction> result = new ArrayList<>();
+        try (PreparedStatement stmt = database.connection().prepareStatement(sql)) {
+            stmt.setString(1, month.toString());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new Transaction(
+                            LocalDate.parse(rs.getString("operation_date")),
+                            rs.getString("description"),
+                            new BigDecimal(rs.getString("amount")),
+                            rs.getString("currency"),
+                            BankSource.valueOf(rs.getString("source"))
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to query transactions", e);
+        }
+        return result;
     }
 }

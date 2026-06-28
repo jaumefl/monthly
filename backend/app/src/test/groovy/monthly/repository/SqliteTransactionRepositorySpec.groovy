@@ -79,6 +79,27 @@ class SqliteTransactionRepositorySpec extends Specification {
         rowCount() == 2
     }
 
+    def "findByMonth returns all transactions for that month, across banks"() {
+        given:
+        repository.saveAll([
+                new Transaction(LocalDate.of(2026, 6, 1), "Santander tx", new BigDecimal("-10.00"), "EUR", BankSource.SANTANDER),
+                new Transaction(LocalDate.of(2026, 6, 2), "Revolut tx",   new BigDecimal("-20.00"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 7, 1), "July tx",      new BigDecimal("-30.00"), "EUR", BankSource.SANTANDER),
+        ])
+
+        when:
+        def result = repository.findByMonth(YearMonth.of(2026, 6))
+
+        then:
+        result.size() == 2
+        result*.description().toSet() == ["Santander tx", "Revolut tx"].toSet()
+    }
+
+    def "findByMonth returns an empty list when nothing matches"() {
+        expect:
+        repository.findByMonth(YearMonth.of(2099, 1)).isEmpty()
+    }
+
     private int rowCount() {
         def rs = database.connection().createStatement().executeQuery("SELECT COUNT(*) FROM transactions")
         rs.getInt(1)
