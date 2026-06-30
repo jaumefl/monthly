@@ -100,6 +100,20 @@ class SqliteTransactionRepositorySpec extends Specification {
         repository.findByMonth(YearMonth.of(2099, 1)).isEmpty()
     }
 
+    def "findByMonth returns transactions newest first, across sources"() {
+        given:
+        repository.saveAll([
+                new Transaction(LocalDate.of(2026, 6, 3),  "older santander", new BigDecimal("-10.00"), "EUR", BankSource.SANTANDER),
+                new Transaction(LocalDate.of(2026, 6, 20), "newer revolut",   new BigDecimal("-25.00"), "EUR", BankSource.REVOLUT),
+        ])
+
+        when:
+        def result = repository.findByMonth(YearMonth.of(2026, 6))
+
+        then:
+        result*.operationDate() == [LocalDate.of(2026, 6, 20), LocalDate.of(2026, 6, 3)]
+    }
+
     private int rowCount() {
         def rs = database.connection().createStatement().executeQuery("SELECT COUNT(*) FROM transactions")
         rs.getInt(1)

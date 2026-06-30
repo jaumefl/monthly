@@ -62,6 +62,7 @@ public class SqliteTransactionRepository implements TransactionRepository {
             SELECT operation_date, description, amount, currency, source
             FROM transactions
             WHERE year_month = ?
+            ORDER BY operation_date DESC
             """;
         List<Transaction> result = new ArrayList<>();
         try (PreparedStatement stmt = database.connection().prepareStatement(sql)) {

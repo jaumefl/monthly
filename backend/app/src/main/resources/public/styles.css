@@ -1,100 +1,626 @@
+/* ============================================================
+   DESIGN TOKENS — edit here to retheme the entire app
+   ============================================================ */
 :root {
-    --bg: #f5f6f8;
-    --surface: #ffffff;
-    --border: #e3e6ea;
-    --text: #1c2128;
-    --text-muted: #6b7280;
-    --income: #1a7f4b;
-    --expense: #c0392b;
-    --accent: #2563eb;
-    --radius: 10px;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  /* Palette */
+  --bg:             #f8fafc;
+  --surface:        #ffffff;
+  --surface-hover:  #f8fafc;
+  --surface-subtle: #f1f5f9;
+  --border:         #e2e8f0;
+  --text:           #0f172a;
+  --text-muted:     #64748b;
+
+  /* Semantic colours */
+  --income:         #059669;
+  --income-bg:      #ecfdf5;
+  --expense:        #e11d48;
+  --expense-bg:     #fff1f2;
+  --net-from:       #4f46e5;
+  --net-to:         #7c3aed;
+  --accent:         #4f46e5;
+  --accent-hover:   #4338ca;
+  --accent-soft:    #eef2ff;
+
+  /* Shape */
+  --radius:    16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow:    0 4px 16px rgba(0,0,0,0.08);
+
+  /* Layout */
+  --gap: 20px;
+  --max-w: 980px;
 }
 
-* { box-sizing: border-box; }
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: var(--bg);
-    color: var(--text);
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
+h1, h2, h3 { margin: 0; }
+ul  { margin: 0; padding: 0; list-style: none; }
+p   { margin: 0; }
+
+.muted  { color: var(--text-muted); font-size: 0.88rem; }
+.center { text-align: center; padding: 16px 0; }
+
+/* ============================================================
+   HEADER
+   ============================================================ */
 .app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 24px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
 }
 
-.app-header h1 { margin: 0; font-size: 1.4rem; }
+.app-header__inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 13px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 
-.month-picker label { margin-right: 8px; color: var(--text-muted); }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
+.brand__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  flex-shrink: 0;
+}
+
+.brand h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* Month nav */
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.month-nav__toggle {
+  display: flex;
+  background: var(--surface-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 2px;
+}
+
+.mnav-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.mnav-btn:hover:not(.active) { color: var(--text); }
+
+.mnav-btn.active {
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.month-nav__pickers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* The [hidden] attribute is enough, but this guards against specificity overrides */
+.month-nav__pickers[hidden] { display: none; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
 main {
-    max-width: 900px;
-    margin: 24px auto;
-    padding: 0 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  max-width: var(--max-w);
+  margin: 24px auto 64px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
 }
 
+/* ============================================================
+   CARDS
+   ============================================================ */
 .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
 }
 
-.card h2 { margin: 0 0 16px; font-size: 1.05rem; }
-
-.import-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-
-select, input[type="file"], button, input[type="month"] {
-    font: inherit;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface);
+.card__title {
+  font-size: 1rem;
+  font-weight: 650;
+  margin-bottom: 16px;
 }
 
-button {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    cursor: pointer;
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
-button:hover { opacity: 0.9; }
 
-.status { color: var(--text-muted); font-size: 0.9rem; margin: 12px 0 0; }
+.card__head .card__title { margin-bottom: 0; }
 
+.pill {
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* ============================================================
+   CHART CARD (hero)
+   ============================================================ */
+.chart-card__header {
+  margin-bottom: 20px;
+}
+
+.chart-card__header h2 {
+  font-size: 1.1rem;
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+
+.chart-card__body {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Fixed-size doughnut container so the centre label overlay works */
+.chart-wrap {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  flex-shrink: 0;
+}
+
+/* Overlay for total inside the doughnut hole */
+.chart-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  gap: 2px;
+}
+
+.chart-center__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.chart-center__value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Category legend */
+.chart-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: 12px 1fr 48px 80px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-xs);
+  transition: background 0.1s;
+}
+
+.legend-item:hover { background: var(--surface-subtle); }
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.legend-pct {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.legend-amount {
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   SUMMARY STATS
+   ============================================================ */
 .summary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap);
 }
 
-.stat { display: flex; flex-direction: column; gap: 6px; }
-.stat-label { color: var(--text-muted); font-size: 0.85rem; }
-.stat-value { font-size: 1.6rem; font-weight: 600; }
-.income { color: var(--income); }
-.expense { color: var(--expense); }
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stat__icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat__icon-wrap--income  { background: var(--income-bg);  color: var(--income);  }
+.stat__icon-wrap--expense { background: var(--expense-bg); color: var(--expense); }
+.stat__icon-wrap--net     { background: rgba(255,255,255,0.22); color: #fff; }
+
+.stat__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stat__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat__value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.stat__value--income { color: var(--income); }
+.stat__value--expense { color: var(--expense); }
+
+.stat--net {
+  background: linear-gradient(135deg, var(--net-from) 0%, var(--net-to) 100%);
+  border: none;
+  box-shadow: var(--shadow);
+  color: #fff;
+}
+
+.stat--net .stat__label { color: rgba(255,255,255,0.75); }
+.stat--net .stat__value { color: #fff; }
+
+/* ============================================================
+   IMPORT CARD
+   ============================================================ */
+.import-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.import-card__info h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+
+.import-card__controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Select */
+select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Custom file picker — the native input is visually hidden */
+.file-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-picker__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-picker__label { cursor: pointer; }
+
+.file-picker__name {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Buttons */
+.btn {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.1s, opacity 0.1s, transform 0.05s;
+  white-space: nowrap;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.btn--secondary:hover { background: var(--surface-subtle); }
+
+.status {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+/* ============================================================
+   TOP EXPENSES
+   ============================================================ */
+.top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.top-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.top-item__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.top-item__desc {
+  font-weight: 550;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-item__amount {
+  color: var(--expense);
+  font-weight: 650;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.top-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.bar-track {
+  height: 5px;
+  background: var(--surface-subtle);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  opacity: 0.75;
+  transition: width 0.5s ease;
+}
+
+/* ============================================================
+   TRANSACTIONS TABLE
+   ============================================================ */
+.table-wrap { overflow-x: auto; }
 
 table { width: 100%; border-collapse: collapse; }
+
 th, td {
-    text-align: left;
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
 }
-th { color: var(--text-muted); font-weight: 600; font-size: 0.85rem; }
+
+th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface-hover); }
+
 .num { text-align: right; }
-td.amount-pos { color: var(--income); text-align: right; }
-td.amount-neg { color: var(--expense); text-align: right; }
+
+.amount-pos { color: var(--income);  text-align: right; font-weight: 620; white-space: nowrap; }
+.amount-neg { color: var(--expense); text-align: right; font-weight: 620; white-space: nowrap; }
+
+.source-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.03em;
+}
+
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 720px) {
+  .summary { grid-template-columns: 1fr; }
+  .stat__value { font-size: 1.25rem; }
+  .chart-card__body { justify-content: center; }
+  .chart-legend { width: 100%; }
+}
 
 @media (max-width: 600px) {
-    .summary { grid-template-columns: 1fr; }
+  .chart-wrap { width: 200px; height: 200px; margin: 0 auto; }
+  .chart-center__value { font-size: 1.1rem; }
+}
+
+@media (max-width: 480px) {
+  .app-header__inner { padding: 12px 16px; }
+  main { padding: 0 16px; margin-top: 16px; }
+  .card { padding: 18px 16px; }
+  .import-card__controls { flex-direction: column; align-items: stretch; }
+  .import-card__controls select,
+  .import-card__controls .btn,
+  .import-card__controls .file-picker { width: 100%; }
+  .file-picker { flex-direction: column; align-items: flex-start; }
+  .month-nav { flex-direction: column; align-items: flex-start; }
 }
