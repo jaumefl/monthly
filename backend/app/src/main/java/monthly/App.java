@@ -32,6 +32,7 @@ public class App {
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         port(4567);
+        staticFiles.location("/public");   // serves src/main/resources/public at "/"
 
         get("/api/months/:yearMonth", (req, res) -> {
             res.type("application/json");

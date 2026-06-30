@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monthly</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header__inner">
+    <div class="brand">
+      <span class="brand__dot"></span>
+      <h1>Monthly</h1>
+    </div>
+
+    <nav class="month-nav" aria-label="Month selector">
+      <div class="month-nav__toggle">
+        <button class="mnav-btn active" id="btn-this-month">This month</button>
+        <button class="mnav-btn" id="btn-pick-month">Pick month</button>
+      </div>
+      <div class="month-nav__pickers" id="month-pickers" hidden aria-hidden="true">
+        <select id="pick-month-sel" aria-label="Month">
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="03">March</option>
+          <option value="04">April</option>
+          <option value="05">May</option>
+          <option value="06">June</option>
+          <option value="07">July</option>
+          <option value="08">August</option>
+          <option value="09">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+        <select id="pick-year-sel" aria-label="Year"></select>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- Hero: spending by category doughnut chart -->
+  <section class="card chart-card" aria-label="Spending by category">
+    <div class="chart-card__header">
+      <div>
+        <h2>Spending by category</h2>
+        <p class="muted" id="chart-subtitle">Select a month to see your breakdown</p>
+      </div>
+    </div>
+    <div class="chart-card__body" id="chart-body">
+      <div class="chart-wrap">
+        <canvas id="category-chart" aria-label="Doughnut chart of spending by category"></canvas>
+        <div class="chart-center" id="chart-center">
+          <span class="chart-center__label">Total spent</span>
+          <span class="chart-center__value" id="chart-total">—</span>
+        </div>
+      </div>
+      <ul class="chart-legend" id="chart-legend" aria-label="Category breakdown"></ul>
+    </div>
+    <p class="muted center" id="chart-empty" hidden>No expenses recorded for this month.</p>
+  </section>
+
+  <!-- Summary stats — secondary to the chart -->
+  <section class="summary" aria-label="Monthly summary">
+    <div class="stat">
+      <div class="stat__icon-wrap stat__icon-wrap--income">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 13V3M3 8l5-5 5 5" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat__body">
+        <span class="stat__label">Income</span>
+        <span class="stat__value stat__value--income" id="income">—</span>
+      </div>
+    </div>
+    <div class="stat">
+      <div class="stat__icon-wrap stat__icon-wrap--expense">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 3v10M3 8l5 5 5-5" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat__body">
+        <span class="stat__label">Expenses</span>
+        <span class="stat__value stat__value--expense" id="expenses">—</span>
+      </div>
+    </div>
+    <div class="stat stat--net">
+      <div class="stat__icon-wrap stat__icon-wrap--net">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 8h12M9 4l5 4-5 4" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat__body">
+        <span class="stat__label">Net</span>
+        <span class="stat__value" id="net">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Import statement -->
+  <section class="card import-card">
+    <div class="import-card__info">
+      <h2>Import statement</h2>
+      <p class="muted">Upload a bank export to populate this month's transactions.</p>
+    </div>
+    <div class="import-card__controls">
+      <select id="bank" aria-label="Bank">
+        <option value="santander">Santander</option>
+        <option value="revolut">Revolut</option>
+      </select>
+      <div class="file-picker">
+        <input type="file" id="file" class="file-picker__input" aria-label="Statement file" />
+        <label for="file" class="btn btn--secondary file-picker__label">Choose file</label>
+        <span class="file-picker__name" id="file-name">No file chosen</span>
+      </div>
+      <button id="import-btn" class="btn btn--primary">Import</button>
+    </div>
+    <p id="import-status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- Top expenses -->
+  <section class="card">
+    <h2 class="card__title">Top expenses</h2>
+    <ul class="top-list" id="top-list" aria-label="Top 5 expenses"></ul>
+    <p id="top-empty" class="muted center" hidden>No expenses this month.</p>
+  </section>
+
+  <!-- Transactions table -->
+  <section class="card">
+    <div class="card__head">
+      <h2 class="card__title">Transactions</h2>
+      <span class="pill" id="tx-count">0</span>
+    </div>
+    <div class="table-wrap">
+      <table id="tx-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Source</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="tx-body"></tbody>
+      </table>
+    </div>
+    <p id="tx-empty" class="muted center" hidden>No transactions for this month.</p>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
