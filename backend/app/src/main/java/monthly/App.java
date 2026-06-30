@@ -3,9 +3,11 @@ package monthly;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import monthly.api.CategorizedTransaction;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.MonthSummary;
+import monthly.domain.TransactionCategorizer;
 import monthly.parser.BankStatementParser;
 import monthly.parser.RevolutParser;
 import monthly.parser.SantanderParser;
@@ -26,6 +28,7 @@ public class App {
         database.createSchema();
         TransactionRepository repository = new SqliteTransactionRepository(database);
         ImportService importService = new ImportService(repository);
+        TransactionCategorizer categorizer = new TransactionCategorizer();
 
         ObjectMapper json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
@@ -37,7 +40,9 @@ public class App {
         get("/api/months/:yearMonth", (req, res) -> {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
-            return repository.findByMonth(month);
+            return repository.findByMonth(month).stream()
+                    .map(tx -> CategorizedTransaction.of(tx, categorizer.categorize(tx)))
+                    .toList();
         }, json::writeValueAsString);
 
         get("/api/months/:yearMonth/summary", (req, res) -> {

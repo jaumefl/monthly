@@ -1,112 +1,23 @@
 /* ============================================================
-   CATEGORY KEYWORD MAP
-   Rules are checked in order; first match wins.
-   Keywords are matched case-insensitively against the full
-   transaction description string. Only expenses (amount < 0)
-   are categorised — income rows are left unlabelled.
-
-   HOW TO EXTEND: add strings to any `keywords` array, or add a
-   new { category, keywords } entry before the last "Other"
-   catch-all (there is no explicit Other rule — anything
-   unmatched falls through to the default).
-
-   Assumptions:
-   - Spanish supermarket / utility brand names included since
-     this is likely a Spanish-based account (Santander source).
-   - Revolut peer-to-peer transfers will usually land in "Other"
-     unless the peer name matches a keyword.
-   - Adjust freely — the list is intentionally broad rather than
-     precise to give a useful first pass without manual tagging.
+   CATEGORY DISPLAY META
+   The backend now assigns each transaction a category (computed
+   on read, returned as `tx.category`, e.g. "EATING_OUT"). This
+   map turns those enum names into a display label + colour used
+   consistently across chart, legend, top expenses and table.
+   Keep keys in sync with monthly.domain.Category.
    ============================================================ */
-const CATEGORY_RULES = [
-  {
-    category: 'Groceries',
-    // Supermarkets and food shops common in Spain
-    keywords: [
-      'mercadona', 'lidl', 'aldi', 'carrefour', 'alcampo', 'eroski',
-      'consum', 'hipercor', 'supercor', 'supermercado', 'froiz',
-      'bon preu', 'caprabo', 'simply', 'el jamon', 'dia ', 'vidal',
-    ],
-  },
-  {
-    category: 'Eating Out',
-    // Restaurants, cafés, bars, food-delivery platforms
-    keywords: [
-      'restaurante', 'restaurant', 'burger', 'mcdonalds', 'kfc', 'subway',
-      'pizza', 'sushi', 'cafe ', 'cafeteria', 'coffee', 'tapas',
-      'cerveceria', 'glovo', 'deliveroo', 'just eat', 'uber eats',
-      'heladeria', 'chocolateria', 'wok', 'bocateria', 'bar ',
-    ],
-  },
-  {
-    category: 'Transport',
-    // Fuel, tolls, public transit, ride-hailing, airlines
-    keywords: [
-      'renfe', 'metro ', 'bus ', 'taxi', 'uber', 'cabify', 'blablacar',
-      'repsol', 'cepsa', 'bp ', 'shell', 'gasolina', 'combustible',
-      'peaje', 'parking', 'autopista', 'aena', 'aeropuerto',
-      'ryanair', 'vueling', 'iberia', 'easyjet', 'transporte',
-    ],
-  },
-  {
-    category: 'Housing',
-    // Rent, mortgage, building community fees
-    keywords: [
-      'alquiler', 'hipoteca', 'comunidad de', 'administrador finca',
-      'inmobiliaria', 'agencia inmobiliaria',
-    ],
-  },
-  {
-    category: 'Utilities',
-    // Electricity, gas, water, internet, mobile
-    keywords: [
-      'endesa', 'iberdrola', 'naturgy', 'gas natural', 'holaluz',
-      'telefonica', 'movistar', 'vodafone', 'orange ', 'jazztel',
-      'masmovil', 'pepephone', 'simyo', 'digi ', 'yoigo',
-      'canal isabel', 'aguas de', 'agua ', 'internet',
-    ],
-  },
-  {
-    category: 'Shopping',
-    // Clothing, electronics, home goods, e-commerce
-    keywords: [
-      'amazon', 'zara', 'h&m', 'primark', 'el corte', 'fnac',
-      'mediamarkt', 'pccomponentes', 'ikea', 'decathlon', 'ebay',
-      'aliexpress', 'mango', 'bershka', 'pull&bear', 'stradivarius',
-      'leroy merlin', 'bricomart',
-    ],
-  },
-  {
-    category: 'Health',
-    // Pharmacies, clinics, gyms, health insurance
-    keywords: [
-      'farmacia', 'pharmacy', 'medico', 'doctor', 'dentista', 'dental',
-      'hospital', 'clinica', 'optica', 'sanitas', 'adeslas', 'asisa',
-      'mutua', 'seguro medico', 'gimnasio', 'gym ', 'fitness',
-    ],
-  },
-  {
-    category: 'Entertainment',
-    // Streaming, cinema, gaming, events
-    keywords: [
-      'netflix', 'spotify', 'hbo', 'prime video', 'disney', 'apple tv',
-      'cine', 'teatro', 'concierto', 'estadio', 'ticketmaster',
-      'steam', 'playstation', 'xbox', 'nintendo',
-    ],
-  },
-];
-
-/* Colour assigned to each category — consistent across chart + legend + badges */
-const CATEGORY_COLORS = {
-  'Groceries':     '#10b981',
-  'Eating Out':    '#f59e0b',
-  'Transport':     '#3b82f6',
-  'Housing':       '#8b5cf6',
-  'Utilities':     '#06b6d4',
-  'Shopping':      '#ec4899',
-  'Health':        '#ef4444',
-  'Entertainment': '#f97316',
-  'Other':         '#94a3b8',
+const CATEGORY_META = {
+    GROCERIES:  { label: 'Groceries',  color: '#10b981' },
+    EATING_OUT: { label: 'Eating Out', color: '#f59e0b' },
+    TRANSPORT:  { label: 'Transport',  color: '#3b82f6' },
+    HOUSING:    { label: 'Housing',    color: '#8b5cf6' },
+    UTILITIES:  { label: 'Utilities',  color: '#06b6d4' },
+    SHOPPING:   { label: 'Shopping',   color: '#ec4899' },
+    HEALTH:     { label: 'Health',     color: '#ef4444' },
+    INVESTMENT: { label: 'Investment', color: '#6366f1' },
+    INCOME:     { label: 'Income',     color: '#22c55e' },
+    SUBSCRIPTION: { label: 'Subscription', color: '#fffb26' },
+    OTHER:      { label: 'Other',      color: '#94a3b8' },
 };
 
 /* ============================================================
@@ -128,14 +39,12 @@ function formatDate(iso) {
 }
 
 /* ============================================================
-   CATEGORISATION
+   CATEGORY META LOOKUP
+   Resolve an API category enum name to its label + colour,
+   defaulting to Other for anything unmapped.
    ============================================================ */
-function categorize(description) {
-  const lower = (description ?? '').toLowerCase();
-  for (const { category, keywords } of CATEGORY_RULES) {
-    if (keywords.some(kw => lower.includes(kw))) return category;
-  }
-  return 'Other';
+function catMeta(category) {
+    return CATEGORY_META[category] ?? CATEGORY_META.OTHER;
 }
 
 /* ============================================================
@@ -229,8 +138,8 @@ function renderCategoryChart(transactions) {
   /* Tally absolute spend per category */
   const totals = {};
   for (const tx of expenses) {
-    const cat = categorize(tx.description);
-    totals[cat] = (totals[cat] || 0) + Math.abs(tx.amount);
+      const cat = tx.category ?? 'OTHER';
+      totals[cat] = (totals[cat] || 0) + Math.abs(tx.amount);
   }
 
   const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
@@ -250,9 +159,9 @@ function renderCategoryChart(transactions) {
   $('chart-subtitle').textContent =
     `${entries.length} categor${entries.length === 1 ? 'y' : 'ies'} · ${euro.format(grandTotal)} total`;
 
-  const labels = entries.map(([k]) => k);
+  const labels = entries.map(([k]) => catMeta(k).label);
   const data   = entries.map(([, v]) => v);
-  const colors = labels.map(l => CATEGORY_COLORS[l] ?? CATEGORY_COLORS['Other']);
+  const colors = entries.map(([k]) => catMeta(k).color);
 
   if (categoryChart) {
     /* Update existing chart in-place to keep the animation smooth */
@@ -306,12 +215,12 @@ function renderChartLegend(entries, total) {
   legend.innerHTML = '';
   for (const [cat, amount] of entries) {
     const pct   = total > 0 ? ((amount / total) * 100).toFixed(1) : '0.0';
-    const color = CATEGORY_COLORS[cat] ?? CATEGORY_COLORS['Other'];
+    const { label, color } = catMeta(cat);
     const li    = document.createElement('li');
     li.className = 'legend-item';
     li.innerHTML = `
       <span class="legend-swatch" style="background:${color}"></span>
-      <span class="legend-name">${escapeHtml(cat)}</span>
+      <span class="legend-name">${escapeHtml(label)}</span>
       <span class="legend-pct">${pct}%</span>
       <span class="legend-amount">${euro.format(amount)}</span>
     `;
@@ -345,9 +254,8 @@ function renderTopExpenses(txs) {
   const maxAbs = Math.abs(expenses[0].amount);
 
   for (const tx of expenses) {
-    const pct   = ((Math.abs(tx.amount) / maxAbs) * 100).toFixed(1);
-    const cat   = categorize(tx.description);
-    const color = CATEGORY_COLORS[cat] ?? CATEGORY_COLORS['Other'];
+      const pct = ((Math.abs(tx.amount) / maxAbs) * 100).toFixed(1);
+      const { label: cat, color } = catMeta(tx.category);
 
     const li = document.createElement('li');
     li.className = 'top-item';
@@ -383,15 +291,13 @@ function renderTransactions(txs) {
 
   for (const tx of txs) {
     const isExpense = tx.amount < 0;
-    const cat       = isExpense ? categorize(tx.description) : null;
-    const catColor  = cat ? (CATEGORY_COLORS[cat] ?? CATEGORY_COLORS['Other']) : null;
+    const { label, color } = catMeta(tx.category);
 
-    const catCell = cat
-      ? `<span class="cat-badge">
-           <span class="cat-dot" style="background:${catColor}"></span>
-           ${escapeHtml(cat)}
-         </span>`
-      : `<span class="cat-badge" style="color:var(--income)">Income</span>`;
+    const catCell =
+      `<span class="cat-badge">
+         <span class="cat-dot" style="background:${color}"></span>
+         ${escapeHtml(label)}
+       </span>`;
 
     const row = document.createElement('tr');
     row.innerHTML = `
