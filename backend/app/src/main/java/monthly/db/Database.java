@@ -42,6 +42,12 @@ public class Database {
                         year_month     TEXT    NOT NULL
                     )
                     """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS category_overrides (
+                    fingerprint TEXT PRIMARY KEY,
+                    category    TEXT NOT NULL
+                )
+                """);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create schema", e);
         }

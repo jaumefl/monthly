@@ -11,5 +11,9 @@ public enum Category {
     INVESTMENT,
     SUBSCRIPTION,
     INCOME,
-    OTHER
+    OTHER;
+
+    public boolean isAssignable() {
+        return this != INCOME;
+    }
 }

@@ -15,16 +15,14 @@ public record CategorizedTransaction(
         BigDecimal amount,
         String currency,
         BankSource source,
-        Category category
+        Category category,
+        String fingerprint,
+        boolean manual
 ) {
-    public static CategorizedTransaction of(Transaction tx, Category category) {
+    public static CategorizedTransaction of(Transaction tx, Category category,
+                                            String fingerprint, boolean manual) {
         return new CategorizedTransaction(
-                tx.operationDate(),
-                tx.description(),
-                tx.amount(),
-                tx.currency(),
-                tx.source(),
-                category
-        );
+                tx.operationDate(), tx.description(), tx.amount(),
+                tx.currency(), tx.source(), category, fingerprint, manual);
     }
 }

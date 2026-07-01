@@ -624,3 +624,48 @@ tbody tr:hover { background: var(--surface-hover); }
   .file-picker { flex-direction: column; align-items: flex-start; }
   .month-nav { flex-direction: column; align-items: flex-start; }
 }
+
+/* ============================================================
+   INLINE CATEGORY EDITOR (transactions table)
+   ============================================================ */
+.cat-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cat-select {
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    max-width: 150px;
+}
+
+.cat-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Manually overridden — accent styling so it's clear the user set it */
+.cat-select--manual {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.cat-reset {
+    font: inherit;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.cat-reset:hover { background: var(--surface-subtle); color: var(--text); }
