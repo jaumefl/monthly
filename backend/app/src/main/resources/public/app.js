@@ -48,6 +48,43 @@ function catMeta(category) {
 }
 
 /* ============================================================
+   ASSIGNABLE CATEGORIES + OVERRIDES
+   /api/categories is the source of truth for the picker (INCOME
+   is filtered out server-side). Fetched once and cached.
+   ============================================================ */
+let assignableCategories = null;
+
+async function ensureCategories() {
+    if (assignableCategories) return;
+    const res = await fetch('/api/categories');
+    if (!res.ok) throw new Error(`Categories: ${res.status}`);
+    assignableCategories = await res.json();   // e.g. ["GROCERIES","EATING_OUT",...]
+}
+
+function categoryOptionsHtml(selected) {
+    return (assignableCategories || [])
+        .map(c => {
+            const sel = c === selected ? ' selected' : '';
+            return `<option value="${c}"${sel}>${escapeHtml(catMeta(c).label)}</option>`;
+        })
+        .join('');
+}
+
+async function setCategory(fingerprint, category) {
+    const res = await fetch(`/api/transactions/${fingerprint}/category`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+async function resetCategory(fingerprint) {
+    const res = await fetch(`/api/transactions/${fingerprint}/category`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+/* ============================================================
    HELPERS
    ============================================================ */
 const $ = id => document.getElementById(id);
@@ -125,6 +162,29 @@ $('pick-year-sel').addEventListener('change', () => {
 $('file').addEventListener('change', () => {
   const f = $('file').files[0];
   $('file-name').textContent = f ? f.name : 'No file chosen';
+});
+
+/* Category edits — delegated so they survive table re-renders */
+$('tx-body').addEventListener('change', async (e) => {
+    const sel = e.target.closest('.cat-select');
+    if (!sel) return;
+    try {
+        await setCategory(sel.dataset.fp, sel.value);
+        await loadMonth();               // refresh chart / top expenses / marker
+    } catch (err) {
+        console.error('Failed to set category:', err);
+    }
+});
+
+$('tx-body').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.cat-reset');
+    if (!btn) return;
+    try {
+        await resetCategory(btn.dataset.fp);
+        await loadMonth();
+    } catch (err) {
+        console.error('Failed to reset category:', err);
+    }
 });
 
 /* ============================================================
@@ -284,31 +344,49 @@ function renderTopExpenses(txs) {
    TRANSACTIONS TABLE
    ============================================================ */
 function renderTransactions(txs) {
-  const body = $('tx-body');
-  body.innerHTML = '';
-  $('tx-empty').hidden = txs.length > 0;
-  $('tx-count').textContent = txs.length;
+    const body = $('tx-body');
+    body.innerHTML = '';
+    $('tx-empty').hidden = txs.length > 0;
+    $('tx-count').textContent = txs.length;
 
-  for (const tx of txs) {
-    const isExpense = tx.amount < 0;
-    const { label, color } = catMeta(tx.category);
+    for (const tx of txs) {
+        const isExpense = tx.amount < 0;
+        const { label, color } = catMeta(tx.category);
 
-    const catCell =
-      `<span class="cat-badge">
-         <span class="cat-dot" style="background:${color}"></span>
-         ${escapeHtml(label)}
-       </span>`;
+        let catCell;
+        if (isExpense) {
+            const manualClass = tx.manual ? ' cat-select--manual' : '';
+            const resetBtn = tx.manual
+                ? `<button class="cat-reset" data-fp="${escapeHtml(tx.fingerprint)}"
+                   title="Reset to automatic" aria-label="Reset to automatic">↺</button>`
+                : '';
+            catCell = `
+        <div class="cat-edit">
+          <span class="cat-dot" style="background:${color}"></span>
+          <select class="cat-select${manualClass}" data-fp="${escapeHtml(tx.fingerprint)}"
+                  aria-label="Category">
+            ${categoryOptionsHtml(tx.category)}
+          </select>
+          ${resetBtn}
+        </div>`;
+        } else {
+            catCell =
+                `<span class="cat-badge">
+           <span class="cat-dot" style="background:${color}"></span>
+           ${escapeHtml(label)}
+         </span>`;
+        }
 
-    const row = document.createElement('tr');
-    row.innerHTML = `
+        const row = document.createElement('tr');
+        row.innerHTML = `
       <td style="white-space:nowrap">${formatDate(tx.operationDate)}</td>
       <td>${escapeHtml(tx.description)}</td>
       <td>${catCell}</td>
       <td><span class="source-tag">${escapeHtml(tx.source)}</span></td>
       <td class="${isExpense ? 'amount-neg' : 'amount-pos'}">${euro.format(tx.amount)}</td>
     `;
-    body.appendChild(row);
-  }
+        body.appendChild(row);
+    }
 }
 
 /* ============================================================
@@ -319,6 +397,7 @@ async function loadMonth() {
   if (!ym) return;
 
   try {
+    await ensureCategories();
     const [summaryRes, txRes] = await Promise.all([
       fetch(`/api/months/${ym}/summary`),
       fetch(`/api/months/${ym}`),
