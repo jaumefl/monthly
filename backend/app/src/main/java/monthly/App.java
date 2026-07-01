@@ -3,21 +3,26 @@ package monthly;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import monthly.api.CategorizedTransaction;
+import monthly.api.CategoryRequest;
 import monthly.db.Database;
 import monthly.domain.BankSource;
+import monthly.domain.Category;
 import monthly.domain.MonthSummary;
 import monthly.domain.TransactionCategorizer;
 import monthly.parser.BankStatementParser;
 import monthly.parser.RevolutParser;
 import monthly.parser.SantanderParser;
+import monthly.repository.CategoryOverrideRepository;
+import monthly.repository.SqliteCategoryOverrideRepository;
 import monthly.repository.SqliteTransactionRepository;
 import monthly.repository.TransactionRepository;
 import monthly.service.ImportService;
+import monthly.service.TransactionQueryService;
 
 import java.io.InputStream;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 
 import static spark.Spark.*;
 
@@ -26,9 +31,13 @@ public class App {
     public static void main(String[] args) {
         Database database = Database.fileDatabase("data/monthly.db");
         database.createSchema();
+
         TransactionRepository repository = new SqliteTransactionRepository(database);
+        CategoryOverrideRepository overrideRepo = new SqliteCategoryOverrideRepository(database);
         ImportService importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
+        TransactionQueryService queryService =
+                new TransactionQueryService(repository, overrideRepo, categorizer);
 
         ObjectMapper json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
@@ -40,15 +49,20 @@ public class App {
         get("/api/months/:yearMonth", (req, res) -> {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
-            return repository.findByMonth(month).stream()
-                    .map(tx -> CategorizedTransaction.of(tx, categorizer.categorize(tx)))
-                    .toList();
+            return queryService.categorizedForMonth(month);
         }, json::writeValueAsString);
 
         get("/api/months/:yearMonth/summary", (req, res) -> {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
             return MonthSummary.of(month, repository.findByMonth(month));
+        }, json::writeValueAsString);
+
+        get("/api/categories", (req, res) -> {
+            res.type("application/json");
+            return Arrays.stream(Category.values())
+                    .filter(Category::isAssignable)
+                    .toList();
         }, json::writeValueAsString);
 
         post("/api/imports/:bank", (req, res) -> {
@@ -59,6 +73,22 @@ public class App {
                 importService.importStatement(parser, in);
             }
             return "{\"status\":\"imported\",\"bank\":\"" + bank + "\"}";
+        });
+
+        put("/api/transactions/:fingerprint/category", (req, res) -> {
+            res.type("application/json");
+            CategoryRequest body = json.readValue(req.body(), CategoryRequest.class);
+            if (!body.category().isAssignable()) {
+                throw new IllegalArgumentException("Category cannot be assigned manually: " + body.category());
+            }
+            overrideRepo.set(req.params("fingerprint"), body.category());
+            return "{\"status\":\"ok\"}";
+        });
+
+        delete("/api/transactions/:fingerprint/category", (req, res) -> {
+            res.type("application/json");
+            overrideRepo.clear(req.params("fingerprint"));
+            return "{\"status\":\"ok\"}";
         });
 
         exception(DateTimeParseException.class, (e, req, res) -> {
