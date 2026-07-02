@@ -26,15 +26,15 @@ function render(cmp) {
   $('cmp-total-b').textContent = euro.format(cmp.baselineTotal);
 
   const rows = cmp.rows;
-  const max = Math.max(1, ...rows.map(r => Math.max(r.amount, r.baselineAmount)));
   const list = $('cmp-rows');
   list.innerHTML = '';
   $('cmp-empty').hidden = rows.length > 0;
 
   for (const r of rows) {
     const { label, color } = catMeta(r.category);
-    const hCur  = (r.amount / max) * 100;
-    const hBase = (r.baselineAmount / max) * 100;
+    const rowMax = Math.max(r.amount, r.baselineAmount);
+    const hCur  = rowMax > 0 ? (r.amount / rowMax) * 100 : 0;
+    const hBase = rowMax > 0 ? (r.baselineAmount / rowMax) * 100 : 0;
 
     const d = r.delta;                       // >0 = spent more than baseline
     const deltaCls = d > 0 ? 'delta--up' : d < 0 ? 'delta--down' : 'delta--flat';
