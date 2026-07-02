@@ -2,6 +2,8 @@ package monthly.service;
 
 import monthly.api.CategorizedTransaction;
 import monthly.domain.Category;
+import monthly.domain.CategoryBreakdown;
+import monthly.domain.Transaction;
 import monthly.domain.TransactionCategorizer;
 import monthly.repository.CategoryOverrideRepository;
 import monthly.repository.TransactionRepository;
@@ -22,6 +24,12 @@ public class TransactionQueryService {
         this.transactions = transactions;
         this.overrides = overrides;
         this.categorizer = categorizer;
+    }
+
+    public CategoryBreakdown categoryBreakdown(YearMonth month) {
+        Map<String, Category> overrideMap = overrides.findAll();
+        return CategoryBreakdown.of(month, transactions.findByMonth(month),
+                tx -> overrideMap.getOrDefault(tx.fingerprint(), categorizer.categorize(tx)));
     }
 
     public List<CategorizedTransaction> categorizedForMonth(YearMonth month) {

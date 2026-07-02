@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monthly · Compare</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header__inner">
+    <div class="brand"><span class="brand__dot"></span><h1>Monthly</h1></div>
+    <nav class="page-nav">
+      <a href="index.html">Dashboard</a>
+      <a href="compare.html" class="active">Compare</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <div class="cmp-controls">
+      <label>This month <select id="cmp-month" aria-label="This month"></select></label>
+      <span class="cmp-vs">vs</span>
+      <label>Baseline <select id="cmp-baseline" aria-label="Baseline month"></select></label>
+    </div>
+    <div class="cmp-totals">
+      <div><span class="muted">This month</span><strong id="cmp-total-a">—</strong></div>
+      <div><span class="muted">Baseline</span><strong id="cmp-total-b">—</strong></div>
+    </div>
+  </section>
+  <section class="card">
+    <h2 class="card__title" id="cmp-title">Comparison</h2>
+    <ul class="cmp-list" id="cmp-rows" aria-label="Category comparison"></ul>
+    <p id="cmp-empty" class="muted center" hidden>No spending in either month.</p>
+  </section>
+</main>
+<script src="common.js"></script>
+<script src="compare.js"></script>
+</body>
+</html>

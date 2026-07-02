@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import monthly.api.CategoryRequest;
+import monthly.api.MonthComparison;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Category;
@@ -56,6 +57,16 @@ public class App {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
             return MonthSummary.of(month, repository.findByMonth(month));
+        }, json::writeValueAsString);
+
+        get("/api/comparison", (req, res) -> {
+            res.type("application/json");
+            String monthParam = req.queryParams("month");
+            if (monthParam == null) throw new IllegalArgumentException("Query parameter 'month' is required (YYYY-MM)");
+            YearMonth month = YearMonth.parse(monthParam);
+            String baselineParam = req.queryParams("baseline");
+            YearMonth baseline = baselineParam != null ? YearMonth.parse(baselineParam) : month.minusMonths(1);
+            return MonthComparison.of(queryService.categoryBreakdown(month), queryService.categoryBreakdown(baseline));
         }, json::writeValueAsString);
 
         get("/api/categories", (req, res) -> {
