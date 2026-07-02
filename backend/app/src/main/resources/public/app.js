@@ -1,31 +1,6 @@
 /* ============================================================
-   CATEGORY DISPLAY META
-   The backend now assigns each transaction a category (computed
-   on read, returned as `tx.category`, e.g. "EATING_OUT"). This
-   map turns those enum names into a display label + colour used
-   consistently across chart, legend, top expenses and table.
-   Keep keys in sync with monthly.domain.Category.
-   ============================================================ */
-const CATEGORY_META = {
-    GROCERIES:  { label: 'Groceries',  color: '#10b981' },
-    EATING_OUT: { label: 'Eating Out', color: '#f59e0b' },
-    TRANSPORT:  { label: 'Transport',  color: '#3b82f6' },
-    HOUSING:    { label: 'Housing',    color: '#8b5cf6' },
-    UTILITIES:  { label: 'Utilities',  color: '#06b6d4' },
-    SHOPPING:   { label: 'Shopping',   color: '#ec4899' },
-    HEALTH:     { label: 'Health',     color: '#ef4444' },
-    INVESTMENT: { label: 'Investment', color: '#6366f1' },
-    INCOME:     { label: 'Income',     color: '#22c55e' },
-    SUBSCRIPTION: { label: 'Subscription', color: '#fffb26' },
-    OTHER:      { label: 'Other',      color: '#94a3b8' },
-};
-
-/* ============================================================
    FORMATTERS
    ============================================================ */
-
-/* Currency: en-IE gives €1,234.56 regardless of OS locale */
-const euro = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' });
 
 /* Date: en-GB gives "14 Jun 2026" */
 const dateFmt = new Intl.DateTimeFormat('en-GB', {
@@ -36,15 +11,6 @@ function formatDate(iso) {
   /* Parse as local midnight to avoid UTC-offset date shifts */
   const [y, m, d] = iso.split('-').map(Number);
   return dateFmt.format(new Date(y, m - 1, d));
-}
-
-/* ============================================================
-   CATEGORY META LOOKUP
-   Resolve an API category enum name to its label + colour,
-   defaulting to Other for anything unmapped.
-   ============================================================ */
-function catMeta(category) {
-    return CATEGORY_META[category] ?? CATEGORY_META.OTHER;
 }
 
 /* ============================================================
@@ -82,17 +48,6 @@ async function setCategory(fingerprint, category) {
 async function resetCategory(fingerprint) {
     const res = await fetch(`/api/transactions/${fingerprint}/category`, { method: 'DELETE' });
     if (!res.ok) throw new Error(await res.text());
-}
-
-/* ============================================================
-   HELPERS
-   ============================================================ */
-const $ = id => document.getElementById(id);
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str ?? '';
-  return div.innerHTML;
 }
 
 /* ============================================================

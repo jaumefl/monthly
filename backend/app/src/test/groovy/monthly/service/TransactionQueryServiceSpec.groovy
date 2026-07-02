@@ -61,6 +61,22 @@ class TransactionQueryServiceSpec extends Specification {
         }
     }
 
+    def "categoryBreakdown honours overrides and excludes income"() {
+        given:
+        def groceries = new Transaction(LocalDate.of(2026, 6, 5), "MERCADONA", new BigDecimal("-30.00"), "EUR", BankSource.SANTANDER)
+        def mystery   = new Transaction(LocalDate.of(2026, 6, 8), "MYSTERY 42", new BigDecimal("-50.00"), "EUR", BankSource.SANTANDER)
+        def salary    = new Transaction(LocalDate.of(2026, 6, 1), "NOMINA", new BigDecimal("2000.00"), "EUR", BankSource.SANTANDER)
+        importService.importStatement(parserReturning([groceries, mystery, salary]), InputStream.nullInputStream())
+        overrideRepo.set(mystery.fingerprint(), Category.SHOPPING)
+        when:
+        def b = queryService.categoryBreakdown(YearMonth.of(2026, 6))
+        then:
+        b.byCategory()[Category.GROCERIES] == new BigDecimal("30.00")
+        b.byCategory()[Category.SHOPPING]  == new BigDecimal("50.00")
+        !b.byCategory().containsKey(Category.INCOME)
+        b.total() == new BigDecimal("80.00")
+    }
+
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
             source() >> BankSource.SANTANDER
