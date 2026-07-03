@@ -13,6 +13,7 @@ import monthly.domain.TransactionCategorizer;
 import monthly.parser.BankStatementParser;
 import monthly.parser.RevolutParser;
 import monthly.parser.SantanderParser;
+import monthly.parser.ImaginParser;
 import monthly.repository.CategoryOverrideRepository;
 import monthly.repository.SqliteCategoryOverrideRepository;
 import monthly.repository.SqliteTransactionRepository;
@@ -127,7 +128,7 @@ public class App {
         return switch (bank) {
             case SANTANDER  -> new SantanderParser();
             case REVOLUT    -> new RevolutParser();
-            case IMAGINBANK -> throw new IllegalArgumentException("imaginBank parser not implemented yet");
+            case IMAGINBANK -> new ImaginParser();
         };
     }
 }
