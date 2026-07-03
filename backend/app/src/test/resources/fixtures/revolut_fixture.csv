@@ -1,0 +1,5 @@
+Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+Card Payment,Current,2026-06-01 10:15:00,2026-06-02 03:00:00,Supermarket ABC,-25.50,0.00,EUR,COMPLETED,150.00
+Transfer,Current,2026-06-05 09:00:00,2026-06-05 09:00:01,Transfer from Friend A,50.00,0.00,EUR,COMPLETED,200.00
+Topup,Current,2026-06-10 18:30:00,2026-06-10 18:30:05,Apple Pay top-up,100.00,0.00,EUR,COMPLETED,300.00
+Card Payment,Current,2026-06-15 14:00:00,,Coffee Shop,-3.50,0.00,EUR,PENDING,

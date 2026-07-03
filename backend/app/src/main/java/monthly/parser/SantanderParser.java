@@ -60,7 +60,7 @@ public class SantanderParser implements BankStatementParser {
                 }
 
                 LocalDate operationDate = LocalDate.parse(firstCell, DATE_FORMAT);
-                String description = stringValue(row.getCell(2));
+                String description = cleanDescription(stringValue(row.getCell(2)));
                 BigDecimal amount = parseAmount(stringValue(row.getCell(3)));
                 String currency = stringValue(row.getCell(5));
 
@@ -76,6 +76,13 @@ public class SantanderParser implements BankStatementParser {
     @Override
     public BankSource source() {
         return BankSource.SANTANDER;
+    }
+
+    private String cleanDescription(String raw) {
+        return raw
+                .replaceAll(",\\s*TARJETA\\s+\\d+\\s*", "")
+                .replaceAll(",\\s*COMISION 0,00", "")
+                .trim();
     }
 
     private String stringValue(Cell cell) {

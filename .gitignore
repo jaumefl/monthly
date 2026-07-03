@@ -11,3 +11,6 @@ data/
 !src/**/test/resources/**/*.xlsx
 !src/**/test/resources/**/*.xls
 !src/**/test/resources/**/*.csv
+!backend/**/test/resources/**/*.xlsx
+!backend/**/test/resources/**/*.xls
+!backend/**/test/resources/**/*.csv

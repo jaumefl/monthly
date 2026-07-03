@@ -20,7 +20,7 @@ class SantanderParserSpec extends Specification {
         def txns = parser.parse(fixture())
 
         then:
-        txns.size() == 4
+        txns.size() == 7
     }
 
     def "uses operation date (column A), not value date (column B)"() {
@@ -66,12 +66,36 @@ class SantanderParserSpec extends Specification {
         txns[3].amount() == new BigDecimal("-2.50")
     }
 
-    def "preserves description verbatim"() {
+    def "preserves description when no noise fragments are present"() {
         when:
         def txns = parser.parse(fixture())
 
         then:
         txns[1].description() == 'BIZUM RECEIVED from Friend'
+    }
+
+    def "strips TARJETA card-number fragment from description"() {
+        when:
+        def txns = parser.parse(fixture())
+
+        then:
+        txns[5].description() == 'CARD PAYMENT'
+    }
+
+    def "strips COMISION 0,00 fragment from description"() {
+        when:
+        def txns = parser.parse(fixture())
+
+        then:
+        txns[6].description() == 'RECIBO Something'
+    }
+
+    def "strips both TARJETA and COMISION 0,00 when both present"() {
+        when:
+        def txns = parser.parse(fixture())
+
+        then:
+        txns[4].description() == 'COMPRA SomeShop, CITY'
     }
 
     def "sets currency from file for all transactions"() {

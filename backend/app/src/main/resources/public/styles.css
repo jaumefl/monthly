@@ -76,7 +76,6 @@ p   { margin: 0; }
   padding: 13px 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -85,15 +84,6 @@ p   { margin: 0; }
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.brand__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
-  flex-shrink: 0;
 }
 
 .brand h1 {
@@ -108,6 +98,7 @@ p   { margin: 0; }
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .month-nav__toggle {
@@ -670,10 +661,8 @@ tbody tr:hover { background: var(--surface-hover); }
 
 .cat-reset:hover { background: var(--surface-subtle); color: var(--text); }
 
-/* ===== Page nav (centered Dashboard / Compare tabs) ===== */
-.app-header__inner { position: relative; }
-.page-nav { position: absolute; left: 50%; transform: translateX(-50%);
-  display: flex; background: var(--surface-subtle); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+/* ===== Page nav (Dashboard / Compare tabs) ===== */
+.page-nav { display: flex; background: var(--surface-subtle); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
 .page-nav a { font-size: 0.85rem; font-weight: 500; padding: 6px 14px; border-radius: 8px;
   color: var(--text-muted); text-decoration: none; transition: background .15s, color .15s; white-space: nowrap; }
 .page-nav a:hover:not(.active) { color: var(--text); }
@@ -714,6 +703,5 @@ tbody tr:hover { background: var(--surface-hover); }
 .delta--flat { color: var(--text-muted); }
 
 @media (max-width: 600px) {
-  .page-nav { position: static; transform: none; }
   .cmp-vbar { width: 52px; }
 }
