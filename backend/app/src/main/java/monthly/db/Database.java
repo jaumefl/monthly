@@ -48,6 +48,11 @@ public class Database {
                     category    TEXT NOT NULL
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS transfers (
+                    fingerprint TEXT PRIMARY KEY
+                )
+                """);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create schema", e);
         }
