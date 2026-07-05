@@ -5,6 +5,7 @@ import monthly.domain.*
 import monthly.parser.BankStatementParser
 import monthly.repository.SqliteCategoryOverrideRepository
 import monthly.repository.SqliteTransactionRepository
+import monthly.repository.SqliteTransferRepository
 import spock.lang.Specification
 
 import java.math.BigDecimal
@@ -18,13 +19,15 @@ class TransactionQueryServiceSpec extends Specification {
     SqliteCategoryOverrideRepository overrideRepo
     TransactionQueryService queryService
     ImportService importService
+    SqliteTransferRepository transferRepo
 
     def setup() {
         database = Database.inMemory()
         database.createSchema()
         txRepo = new SqliteTransactionRepository(database)
         overrideRepo = new SqliteCategoryOverrideRepository(database)
-        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer())
+        transferRepo = new SqliteTransferRepository(database);
+        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo)
         importService = new ImportService(txRepo)
     }
 
@@ -75,6 +78,38 @@ class TransactionQueryServiceSpec extends Specification {
         b.byCategory()[Category.SHOPPING]  == new BigDecimal("50.00")
         !b.byCategory().containsKey(Category.INCOME)
         b.total() == new BigDecimal("80.00")
+    }
+    def "categoryBreakdown excludes transactions flagged as transfers"() {
+        given:
+        def groceries = new Transaction(LocalDate.of(2026, 6, 5), "MERCADONA", new BigDecimal("-30.00"), "EUR", BankSource.IMAGINBANK)
+        def moveOut   = new Transaction(LocalDate.of(2026, 6, 6), "TRASPASO A REVOLUT", new BigDecimal("-200.00"), "EUR", BankSource.IMAGINBANK)
+        importService.importStatement(parserReturning([groceries, moveOut]), InputStream.nullInputStream())
+        transferRepo.mark(moveOut.fingerprint())
+
+        when:
+        def b = queryService.categoryBreakdown(YearMonth.of(2026, 6))
+
+        then: "the transfer outflow is gone; only real spend remains"
+        b.byCategory()[Category.GROCERIES] == new BigDecimal("30.00")
+        b.total() == new BigDecimal("30.00")
+    }
+
+    def "monthSummary excludes both legs of a flagged transfer pair"() {
+        given: "an imagin outflow and the matching Revolut inflow, both tagged"
+        def outflow = new Transaction(LocalDate.of(2026, 6, 6), "TRASPASO A REVOLUT", new BigDecimal("-200.00"), "EUR", BankSource.IMAGINBANK)
+        def inflow  = new Transaction(LocalDate.of(2026, 6, 6), "TOP-UP", new BigDecimal("200.00"), "EUR", BankSource.REVOLUT)
+        def salary  = new Transaction(LocalDate.of(2026, 6, 1), "NOMINA", new BigDecimal("2000.00"), "EUR", BankSource.IMAGINBANK)
+        importService.importStatement(parserReturning([outflow, inflow, salary]), InputStream.nullInputStream())
+        transferRepo.mark(outflow.fingerprint())
+        transferRepo.mark(inflow.fingerprint())
+
+        when:
+        def s = queryService.monthSummary(YearMonth.of(2026, 6))
+
+        then: "neither leg counts; only the salary remains as income"
+        s.income()   == new BigDecimal("2000.00")
+        s.expenses() == BigDecimal.ZERO
+        s.net()      == new BigDecimal("2000.00")
     }
 
     private BankStatementParser parserReturning(List<Transaction> txs) {

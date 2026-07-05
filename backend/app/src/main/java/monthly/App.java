@@ -8,7 +8,6 @@ import monthly.api.MonthComparison;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Category;
-import monthly.domain.MonthSummary;
 import monthly.domain.TransactionCategorizer;
 import monthly.parser.BankStatementParser;
 import monthly.parser.RevolutParser;
@@ -18,6 +17,8 @@ import monthly.repository.CategoryOverrideRepository;
 import monthly.repository.SqliteCategoryOverrideRepository;
 import monthly.repository.SqliteTransactionRepository;
 import monthly.repository.TransactionRepository;
+import monthly.repository.SqliteTransferRepository;
+import monthly.repository.TransferRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
 
@@ -36,10 +37,11 @@ public class App {
 
         TransactionRepository repository = new SqliteTransactionRepository(database);
         CategoryOverrideRepository overrideRepo = new SqliteCategoryOverrideRepository(database);
+        TransferRepository transferRepo = new SqliteTransferRepository(database);
         ImportService importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
         TransactionQueryService queryService =
-                new TransactionQueryService(repository, overrideRepo, categorizer);
+                new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo);
 
         ObjectMapper json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
@@ -57,7 +59,7 @@ public class App {
         get("/api/months/:yearMonth/summary", (req, res) -> {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
-            return MonthSummary.of(month, repository.findByMonth(month));
+            return queryService.monthSummary(month);
         }, json::writeValueAsString);
 
         get("/api/comparison", (req, res) -> {
