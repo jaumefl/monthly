@@ -50,6 +50,13 @@ async function resetCategory(fingerprint) {
     if (!res.ok) throw new Error(await res.text());
 }
 
+async function setTransfer(fingerprint, isTransfer) {
+    const res = await fetch(`/api/transactions/${fingerprint}/transfer`, {
+        method: isTransfer ? 'PUT' : 'DELETE',
+    });
+    if (!res.ok) throw new Error(await res.text());
+}
+
 /* ============================================================
    MONTH NAV
    Two modes:
@@ -141,6 +148,17 @@ $('tx-body').addEventListener('click', async (e) => {
         console.error('Failed to reset category:', err);
     }
 });
+$('tx-body').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.transfer-toggle');
+    if (!btn) return;
+    const isActive = btn.classList.contains('transfer-toggle--active');
+    try {
+        await setTransfer(btn.dataset.fp, !isActive);
+        await loadMonth();            // refresh chart, summary, and row state
+    } catch (err) {
+        console.error('Failed to toggle transfer:', err);
+    }
+});
 
 /* ============================================================
    CHART
@@ -148,7 +166,7 @@ $('tx-body').addEventListener('click', async (e) => {
 let categoryChart = null;
 
 function renderCategoryChart(transactions) {
-  const expenses = transactions.filter(t => t.amount < 0);
+  const expenses = transactions.filter(t => t.amount < 0 && !t.transfer);
 
   /* Tally absolute spend per category */
   const totals = {};
@@ -257,7 +275,7 @@ function renderSummary(s) {
    ============================================================ */
 function renderTopExpenses(txs) {
   const expenses = txs
-    .filter(t => t.amount < 0)
+    .filter(t => t.amount < 0 && !t.transfer)
     .sort((a, b) => a.amount - b.amount)
     .slice(0, 5);
 
@@ -323,16 +341,18 @@ function renderTransactions(txs) {
             ${categoryOptionsHtml(tx.category)}
           </select>
           ${resetBtn}
+          ${transferToggleHtml(tx)}
         </div>`;
         } else {
             catCell =
                 `<span class="cat-badge">
            <span class="cat-dot" style="background:${color}"></span>
            ${escapeHtml(label)}
-         </span>`;
+         </span>${transferToggleHtml(tx)}`;
         }
 
         const row = document.createElement('tr');
+        if (tx.transfer) row.className = 'tx-row--transfer';
         row.innerHTML = `
       <td style="white-space:nowrap">${formatDate(tx.operationDate)}</td>
       <td>${escapeHtml(tx.description)}</td>
@@ -342,6 +362,13 @@ function renderTransactions(txs) {
     `;
         body.appendChild(row);
     }
+}
+
+function transferToggleHtml(tx) {
+    const active = tx.transfer ? ' transfer-toggle--active' : '';
+    const title = tx.transfer ? 'Unmark as transfer' : 'Mark as transfer (exclude from graphs)';
+    return `<button class="transfer-toggle${active}" data-fp="${escapeHtml(tx.fingerprint)}"
+             title="${title}" aria-label="${title}" aria-pressed="${tx.transfer}">⇄</button>`;
 }
 
 /* ============================================================

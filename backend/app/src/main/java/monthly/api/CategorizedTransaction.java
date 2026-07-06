@@ -17,12 +17,14 @@ public record CategorizedTransaction(
         BankSource source,
         Category category,
         String fingerprint,
-        boolean manual
+        boolean manual,
+        boolean transfer
 ) {
     public static CategorizedTransaction of(Transaction tx, Category category,
-                                            String fingerprint, boolean manual) {
+                                            String fingerprint, boolean manual,
+                                            boolean transfer) {
         return new CategorizedTransaction(
                 tx.operationDate(), tx.description(), tx.amount(),
-                tx.currency(), tx.source(), category, fingerprint, manual);
+                tx.currency(), tx.source(), category, fingerprint, manual, transfer);
     }
 }
