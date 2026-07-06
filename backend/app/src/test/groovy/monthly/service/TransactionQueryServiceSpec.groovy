@@ -111,6 +111,21 @@ class TransactionQueryServiceSpec extends Specification {
         s.expenses() == BigDecimal.ZERO
         s.net()      == new BigDecimal("2000.00")
     }
+    def "categorizedForMonth flags transactions marked as transfers"() {
+        given:
+        def spend    = new Transaction(LocalDate.of(2026, 6, 5), "MERCADONA", new BigDecimal("-30.00"), "EUR", BankSource.IMAGINBANK)
+        def transfer = new Transaction(LocalDate.of(2026, 6, 6), "TRASPASO A REVOLUT", new BigDecimal("-200.00"), "EUR", BankSource.IMAGINBANK)
+        importService.importStatement(parserReturning([spend, transfer]), InputStream.nullInputStream())
+        transferRepo.mark(transfer.fingerprint())
+
+        when:
+        def rows = queryService.categorizedForMonth(YearMonth.of(2026, 6))
+
+        then: "both stay in the list, but only the tagged one is flagged"
+        rows.size() == 2
+        rows.find { it.description() == "MERCADONA" }.transfer() == false
+        rows.find { it.description() == "TRASPASO A REVOLUT" }.transfer() == true
+    }
 
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {

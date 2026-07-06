@@ -105,6 +105,18 @@ public class App {
             return "{\"status\":\"ok\"}";
         });
 
+        put("/api/transactions/:fingerprint/transfer", (req, res) -> {
+            res.type("application/json");
+            transferRepo.mark(req.params("fingerprint"));
+            return "{\"status\":\"ok\"}";
+        });
+
+        delete("/api/transactions/:fingerprint/transfer", (req, res) -> {
+            res.type("application/json");
+            transferRepo.unmark(req.params("fingerprint"));
+            return "{\"status\":\"ok\"}";
+        });
+
         exception(DateTimeParseException.class, (e, req, res) -> {
             res.status(400);
             res.type("application/json");

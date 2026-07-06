@@ -36,11 +36,13 @@ public class TransactionQueryService {
 
     public List<CategorizedTransaction> categorizedForMonth(YearMonth month) {
         Map<String, Category> overrideMap = overrides.findAll();
+        Set<String> transferFps = transfers.findAll();
         return transactions.findByMonth(month).stream()
                 .map(tx -> {
                     String fp = tx.fingerprint();
                     Category effective = overrideMap.getOrDefault(fp, categorizer.categorize(tx));
-                    return CategorizedTransaction.of(tx, effective, fp, overrideMap.containsKey(fp));
+                    return CategorizedTransaction.of(tx, effective, fp, overrideMap.containsKey(fp),
+                            transferFps.contains(fp));
                 })
                 .toList();
     }
