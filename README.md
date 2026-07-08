@@ -1,5 +1,7 @@
 # Monthly
 
+[![CI](https://github.com/jaumefl/monthly/actions/workflows/ci.yml/badge.svg)](https://github.com/jaumefl/monthly/actions/workflows/ci.yml)
+
 A personal finance tracker that turns raw monthly bank exports into a clean, categorized view of where my money actually goes.
 
 I built Monthly to solve a real problem of my own: I hold accounts across several banks, each of which exports statements in its own messy format, and none of them gives me a single monthly picture. Monthly parses those exports, normalizes them into one model, categorizes each transaction, and serves a small web dashboard where I can browse a month, compare it against another, and correct anything the auto-categorizer gets wrong.
@@ -91,6 +93,7 @@ Tests are written first, with Spock's `given / when / then` structure and `@Unro
 ```bash
 ./gradlew test
 ```
+Every push and pull request also runs the full test suite on GitHub Actions, so nothing merges to `main` without a green build.
 
 Bank exports contain personal data, so **no real statement is ever committed.** The repository ignores `data/` and all `.xlsx` / `.xls` / `.csv` files by default; test fixtures are hand-anonymized — real structure, fake amounts and descriptions — and live under `src/test/resources/`.
 
@@ -117,4 +120,4 @@ monthly/
 
 ## Notes
 
-This is an evolving side project I use with my own accounts. It's deliberately scoped to a single local user with no authentication in this version, and the keyword categorizer is tuned to my own spending, so it's expected to need ongoing adjustment. Planned next steps include an HTTP-level integration test, a GitHub Actions CI pipeline, and further categorization tuning.
+This is an evolving side project I use with my own accounts. It's deliberately scoped to a single local user with no authentication in this version, and the keyword categorizer is tuned to my own spending, so it's expected to need ongoing adjustment. Planned next steps include an HTTP-level integration test and further categorization tuning.
