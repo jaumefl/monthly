@@ -21,48 +21,75 @@ import monthly.repository.SqliteTransferRepository;
 import monthly.repository.TransferRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
+import spark.Service;
 
 import java.io.InputStream;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 
-import static spark.Spark.*;
-
 public class App {
 
-    public static void main(String[] args) {
-        Database database = Database.fileDatabase("data/monthly.db");
+    private final Service http;
+    private final int requestedPort;
+
+    private final ImportService importService;
+    private final TransactionQueryService queryService;
+    private final CategoryOverrideRepository overrideRepo;
+    private final TransferRepository transferRepo;
+    private final ObjectMapper json;
+
+    public App(Database database, int port) {
         database.createSchema();
 
         TransactionRepository repository = new SqliteTransactionRepository(database);
-        CategoryOverrideRepository overrideRepo = new SqliteCategoryOverrideRepository(database);
-        TransferRepository transferRepo = new SqliteTransferRepository(database);
-        ImportService importService = new ImportService(repository);
+        this.overrideRepo = new SqliteCategoryOverrideRepository(database);
+        this.transferRepo = new SqliteTransferRepository(database);
+        this.importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
-        TransactionQueryService queryService =
-                new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo);
+        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo);
 
-        ObjectMapper json = new ObjectMapper()
+        this.json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        port(4567);
-        staticFiles.location("/public");   // serves src/main/resources/public at "/"
+        this.requestedPort = port;
+        this.http = Service.ignite();
+    }
 
-        get("/api/months/:yearMonth", (req, res) -> {
+    /** Starts the server and blocks until it is ready to accept requests. */
+    public App start() {
+        http.port(requestedPort);
+        http.staticFiles.location("/public");   // serves src/main/resources/public at "/"
+        registerRoutes();
+        http.awaitInitialization();
+        return this;
+    }
+
+    /** The actual bound port — meaningful when constructed with port 0 (tests). */
+    public int port() {
+        return http.port();
+    }
+
+    public void stop() {
+        http.stop();
+        http.awaitStop();
+    }
+
+    private void registerRoutes() {
+        http.get("/api/months/:yearMonth", (req, res) -> {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
             return queryService.categorizedForMonth(month);
         }, json::writeValueAsString);
 
-        get("/api/months/:yearMonth/summary", (req, res) -> {
+        http.get("/api/months/:yearMonth/summary", (req, res) -> {
             res.type("application/json");
             YearMonth month = YearMonth.parse(req.params("yearMonth"));
             return queryService.monthSummary(month);
         }, json::writeValueAsString);
 
-        get("/api/comparison", (req, res) -> {
+        http.get("/api/comparison", (req, res) -> {
             res.type("application/json");
             String monthParam = req.queryParams("month");
             if (monthParam == null) throw new IllegalArgumentException("Query parameter 'month' is required (YYYY-MM)");
@@ -72,14 +99,14 @@ public class App {
             return MonthComparison.of(queryService.categoryBreakdown(month), queryService.categoryBreakdown(baseline));
         }, json::writeValueAsString);
 
-        get("/api/categories", (req, res) -> {
+        http.get("/api/categories", (req, res) -> {
             res.type("application/json");
             return Arrays.stream(Category.values())
                     .filter(Category::isAssignable)
                     .toList();
         }, json::writeValueAsString);
 
-        post("/api/imports/:bank", (req, res) -> {
+        http.post("/api/imports/:bank", (req, res) -> {
             res.type("application/json");
             BankSource bank = parseBank(req.params("bank"));
             BankStatementParser parser = parserFor(bank);
@@ -89,7 +116,7 @@ public class App {
             return "{\"status\":\"imported\",\"bank\":\"" + bank + "\"}";
         });
 
-        put("/api/transactions/:fingerprint/category", (req, res) -> {
+        http.put("/api/transactions/:fingerprint/category", (req, res) -> {
             res.type("application/json");
             CategoryRequest body = json.readValue(req.body(), CategoryRequest.class);
             if (!body.category().isAssignable()) {
@@ -99,31 +126,31 @@ public class App {
             return "{\"status\":\"ok\"}";
         });
 
-        delete("/api/transactions/:fingerprint/category", (req, res) -> {
+        http.delete("/api/transactions/:fingerprint/category", (req, res) -> {
             res.type("application/json");
             overrideRepo.clear(req.params("fingerprint"));
             return "{\"status\":\"ok\"}";
         });
 
-        put("/api/transactions/:fingerprint/transfer", (req, res) -> {
+        http.put("/api/transactions/:fingerprint/transfer", (req, res) -> {
             res.type("application/json");
             transferRepo.mark(req.params("fingerprint"));
             return "{\"status\":\"ok\"}";
         });
 
-        delete("/api/transactions/:fingerprint/transfer", (req, res) -> {
+        http.delete("/api/transactions/:fingerprint/transfer", (req, res) -> {
             res.type("application/json");
             transferRepo.unmark(req.params("fingerprint"));
             return "{\"status\":\"ok\"}";
         });
 
-        exception(DateTimeParseException.class, (e, req, res) -> {
+        http.exception(DateTimeParseException.class, (e, req, res) -> {
             res.status(400);
             res.type("application/json");
             res.body("{\"error\":\"Invalid month, expected format YYYY-MM\"}");
         });
 
-        exception(IllegalArgumentException.class, (e, req, res) -> {
+        http.exception(IllegalArgumentException.class, (e, req, res) -> {
             res.status(400);
             res.type("application/json");
             res.body("{\"error\":\"" + e.getMessage() + "\"}");
@@ -144,5 +171,9 @@ public class App {
             case REVOLUT    -> new RevolutParser();
             case IMAGINBANK -> new ImaginParser();
         };
+    }
+
+    public static void main(String[] args) {
+        new App(Database.fileDatabase("data/monthly.db"), 4567).start();
     }
 }

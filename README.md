@@ -95,6 +95,8 @@ Tests are written first, with Spock's `given / when / then` structure and `@Unro
 ```
 Every push and pull request also runs the full test suite on GitHub Actions, so nothing merges to `main` without a green build.
 
+Alongside the unit specs, an HTTP integration test boots the real server on an unused port, imports a fixture statement over the API, and asserts the month summary and transaction endpoints end to end.
+
 Bank exports contain personal data, so **no real statement is ever committed.** The repository ignores `data/` and all `.xlsx` / `.xls` / `.csv` files by default; test fixtures are hand-anonymized — real structure, fake amounts and descriptions — and live under `src/test/resources/`.
 
 ## Project layout
@@ -120,4 +122,4 @@ monthly/
 
 ## Notes
 
-This is an evolving side project I use with my own accounts. It's deliberately scoped to a single local user with no authentication in this version, and the keyword categorizer is tuned to my own spending, so it's expected to need ongoing adjustment. Planned next steps include an HTTP-level integration test and further categorization tuning.
+This is an evolving side project I use with my own accounts. It's deliberately scoped to a single local user with no authentication in this version, and the keyword categorizer is tuned to my own spending, so it's expected to need ongoing adjustment. Further categorization tuning is the main ongoing work.

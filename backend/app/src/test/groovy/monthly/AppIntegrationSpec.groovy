@@ -1,0 +1,83 @@
+package monthly
+
+import groovy.json.JsonSlurper
+import monthly.db.Database
+import spock.lang.Shared
+import spock.lang.Specification
+
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+
+class AppIntegrationSpec extends Specification {
+
+    @Shared App app
+    @Shared int port
+    @Shared HttpClient client = HttpClient.newHttpClient()
+
+    def setupSpec() {
+        app = new App(Database.inMemory(), 0).start()   // port 0 = OS picks a free port
+        port = app.port()
+        // seed the shared in-memory DB so the query tests have data regardless of order
+        post("/api/imports/revolut", fixtureBytes("revolut_fixture.csv"))
+    }
+
+    def cleanupSpec() {
+        app?.stop()
+    }
+
+    def "the import endpoint accepts a raw Revolut export"() {
+        when: "the same month is imported again (replace-strategy makes this idempotent)"
+        def resp = post("/api/imports/revolut", fixtureBytes("revolut_fixture.csv"))
+
+        then:
+        resp.statusCode() == 200
+        new JsonSlurper().parseText(resp.body()).bank == "REVOLUT"
+    }
+
+    def "the month summary reflects the four imported rows"() {
+        when:
+        def resp = get("/api/months/2026-06/summary")
+        def summary = new JsonSlurper().parseText(resp.body())
+
+        then:
+        resp.statusCode() == 200
+        summary.income   == 150.00   // 50.00 + 100.00
+        summary.expenses == -29.00    // -25.50 + -3.50
+        summary.net      == 121.00
+    }
+
+    def "the month endpoint returns all categorized transactions"() {
+        when:
+        def resp = get("/api/months/2026-06")
+        def rows = new JsonSlurper().parseText(resp.body())
+
+        then:
+        resp.statusCode() == 200
+        rows.size() == 4
+    }
+
+    def "a malformed month is rejected with 400"() {
+        expect:
+        get("/api/months/not-a-month/summary").statusCode() == 400
+    }
+
+    // --- helpers ---
+
+    private HttpResponse<String> get(String path) {
+        client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}")).GET().build(),
+                HttpResponse.BodyHandlers.ofString())
+    }
+
+    private HttpResponse<String> post(String path, byte[] body) {
+        client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build(),
+                HttpResponse.BodyHandlers.ofString())
+    }
+
+    private byte[] fixtureBytes(String name) {
+        def stream = getClass().getResourceAsStream("/fixtures/${name}")
+        assert stream != null : "fixture ${name} not found on classpath"
+        stream.bytes
+    }
+}
