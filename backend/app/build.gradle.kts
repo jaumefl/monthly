@@ -17,6 +17,7 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.2")
 
     testImplementation(libs.groovy)
+    testImplementation(libs.groovy.json)
     testImplementation(libs.spock.core)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
