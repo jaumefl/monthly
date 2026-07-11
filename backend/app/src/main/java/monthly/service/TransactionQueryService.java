@@ -2,6 +2,8 @@ package monthly.service;
 
 import monthly.api.CategorizedTransaction;
 import monthly.domain.*;
+import monthly.domain.BudgetReport;
+import monthly.repository.BudgetRepository;
 import monthly.repository.CategoryOverrideRepository;
 import monthly.repository.TransactionRepository;
 import monthly.repository.TransferRepository;
@@ -17,21 +19,28 @@ public class TransactionQueryService {
     private final CategoryOverrideRepository overrides;
     private final TransactionCategorizer categorizer;
     private final TransferRepository transfers;
+    private final BudgetRepository budgets;
 
     public TransactionQueryService(TransactionRepository transactions,
                                    CategoryOverrideRepository overrides,
                                    TransactionCategorizer categorizer,
-                                   TransferRepository transfers) {
+                                   TransferRepository transfers,
+                                   BudgetRepository budgets) {
         this.transactions = transactions;
         this.overrides = overrides;
         this.transfers = transfers;
         this.categorizer = categorizer;
+        this.budgets = budgets;
     }
 
     public CategoryBreakdown categoryBreakdown(YearMonth month) {
         Map<String, Category> overrideMap = overrides.findAll();
         return CategoryBreakdown.of(month, visibleTransactions(month),
                 tx -> overrideMap.getOrDefault(tx.fingerprint(), categorizer.categorize(tx)));
+    }
+
+    public BudgetReport budgetReport(YearMonth month) {
+        return BudgetReport.of(categoryBreakdown(month), budgets.findAll());
     }
 
     public List<CategorizedTransaction> categorizedForMonth(YearMonth month) {

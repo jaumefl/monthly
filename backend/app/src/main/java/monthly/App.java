@@ -19,6 +19,8 @@ import monthly.repository.SqliteTransactionRepository;
 import monthly.repository.TransactionRepository;
 import monthly.repository.SqliteTransferRepository;
 import monthly.repository.TransferRepository;
+import monthly.repository.SqliteBudgetRepository;
+import monthly.repository.BudgetRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
 import spark.Service;
@@ -37,6 +39,7 @@ public class App {
     private final TransactionQueryService queryService;
     private final CategoryOverrideRepository overrideRepo;
     private final TransferRepository transferRepo;
+    private final BudgetRepository budgetRepo;
     private final ObjectMapper json;
 
     public App(Database database, int port) {
@@ -47,7 +50,8 @@ public class App {
         this.transferRepo = new SqliteTransferRepository(database);
         this.importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
-        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo);
+        this.budgetRepo = new SqliteBudgetRepository(database);
+        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo);
 
         this.json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())

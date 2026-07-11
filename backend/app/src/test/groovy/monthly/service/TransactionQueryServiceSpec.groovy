@@ -6,6 +6,7 @@ import monthly.parser.BankStatementParser
 import monthly.repository.SqliteCategoryOverrideRepository
 import monthly.repository.SqliteTransactionRepository
 import monthly.repository.SqliteTransferRepository
+import monthly.repository.SqliteBudgetRepository
 import spock.lang.Specification
 
 import java.math.BigDecimal
@@ -20,14 +21,16 @@ class TransactionQueryServiceSpec extends Specification {
     TransactionQueryService queryService
     ImportService importService
     SqliteTransferRepository transferRepo
+    SqliteBudgetRepository budgetRepo
 
     def setup() {
         database = Database.inMemory()
         database.createSchema()
         txRepo = new SqliteTransactionRepository(database)
         overrideRepo = new SqliteCategoryOverrideRepository(database)
-        transferRepo = new SqliteTransferRepository(database);
-        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo)
+        transferRepo = new SqliteTransferRepository(database)
+        budgetRepo = new SqliteBudgetRepository(database)
+        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo, budgetRepo)
         importService = new ImportService(txRepo)
     }
 
@@ -125,6 +128,31 @@ class TransactionQueryServiceSpec extends Specification {
         rows.size() == 2
         rows.find { it.description() == "MERCADONA" }.transfer() == false
         rows.find { it.description() == "TRASPASO A REVOLUT" }.transfer() == true
+    }
+    def "budgetReport pairs each configured limit with the month's spend"() {
+        given:
+        def groceries = new Transaction(LocalDate.of(2026, 6, 5),  "MERCADONA",   new BigDecimal("-120.00"), "EUR", BankSource.SANTANDER)
+        def more      = new Transaction(LocalDate.of(2026, 6, 9),  "MERCADONA 2", new BigDecimal("-80.00"),  "EUR", BankSource.SANTANDER)
+        def eatingOut = new Transaction(LocalDate.of(2026, 6, 12), "RESTAURANTE", new BigDecimal("-60.00"),  "EUR", BankSource.SANTANDER)
+        importService.importStatement(parserReturning([groceries, more, eatingOut]), InputStream.nullInputStream())
+        budgetRepo.set(Category.GROCERIES, new BigDecimal("250.00"))
+        budgetRepo.set(Category.EATING_OUT, new BigDecimal("50.00"))
+
+        when:
+        def report = queryService.budgetReport(YearMonth.of(2026, 6))
+
+        then:
+        report.lines().size() == 2
+        with(report.lines().find { it.category() == Category.GROCERIES }) {
+            spent()     == new BigDecimal("200.00")
+            remaining() == new BigDecimal("50.00")
+            !overBudget()
+        }
+        with(report.lines().find { it.category() == Category.EATING_OUT }) {
+            spent()     == new BigDecimal("60.00")
+            remaining() == new BigDecimal("-10.00")
+            overBudget()
+        }
     }
 
     private BankStatementParser parserReturning(List<Transaction> txs) {
