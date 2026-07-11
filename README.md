@@ -17,6 +17,7 @@ It's a single-user app that runs locally, and I've been developing it test-first
 - **Compares two months side by side.** A dedicated page renders paired vertical bars per category (baseline vs. current) with the euro delta and percent change, scaled per-category so one large category doesn't flatten the rest.
 - **Handles transfers between my own accounts.** Transactions can be flagged as transfers so they're excluded from the spending graphs and don't show up as phantom income or expense.
 - **Idempotent imports.** Re-importing a `(bank, month)` pair replaces exactly that bank's transactions for that month, so repeated imports never double-count.
+- **Sets a monthly budget per category.** I can give any category a spending limit; the compare page shows a fill bar of actual spend against the limit, how much is left to reach it, and flags anything over budget in red.
 
 ## Tech stack
 
@@ -56,8 +57,7 @@ Bank export ──▶ Parser ──▶ Transaction ──▶ Repository (SQLite)
 - `Transaction` (record): operation date, description, amount, currency, source bank, plus a `month()` helper.
 - `BankSource` (enum): `SANTANDER`, `REVOLUT`, `IMAGINBANK`.
 - `Category` (enum): the eleven categories above; `isAssignable()` blocks manual assignment of `INCOME`.
-- `MonthSummary`, `CategoryBreakdown`, `MonthComparison`: small value types that keep aggregation logic in the domain and unit-testable.
-
+- `MonthSummary`, `CategoryBreakdown`, `MonthComparison`, `BudgetReport`: small value types that keep aggregation logic in the domain and unit-testable.
 ## API
 
 | Method | Endpoint | Description |
@@ -69,6 +69,9 @@ Bank export ──▶ Parser ──▶ Transaction ──▶ Repository (SQLite)
 | `POST` | `/api/imports/{bank}` | Import a raw statement (request body is the file) |
 | `PUT` / `DELETE` | `/api/transactions/{fingerprint}/category` | Set or clear a category override |
 | `PUT` / `DELETE` | `/api/transactions/{fingerprint}/transfer` | Flag or unflag a transaction as a transfer |
+| `GET` | `/api/budgets` | Configured monthly limit per category |
+| `GET` | `/api/budgets/report?month=YYYY-MM` | Spend vs. limit per budgeted category |
+| `PUT` / `DELETE` | `/api/budgets/{category}` | Set or clear a category's budget |
 
 ## Running it
 
