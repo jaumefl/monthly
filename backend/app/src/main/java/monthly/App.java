@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import monthly.api.CategoryRequest;
 import monthly.api.MonthComparison;
+import monthly.api.BudgetRequest;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Category;
@@ -110,6 +111,18 @@ public class App {
                     .toList();
         }, json::writeValueAsString);
 
+        http.get("/api/budgets", (req, res) -> {
+            res.type("application/json");
+            return budgetRepo.findAll();
+        }, json::writeValueAsString);
+
+        http.get("/api/budgets/report", (req, res) -> {
+            res.type("application/json");
+            String monthParam = req.queryParams("month");
+            if (monthParam == null) throw new IllegalArgumentException("Query parameter 'month' is required (YYYY-MM)");
+            return queryService.budgetReport(YearMonth.parse(monthParam));
+        }, json::writeValueAsString);
+
         http.post("/api/imports/:bank", (req, res) -> {
             res.type("application/json");
             BankSource bank = parseBank(req.params("bank"));
@@ -133,6 +146,26 @@ public class App {
         http.delete("/api/transactions/:fingerprint/category", (req, res) -> {
             res.type("application/json");
             overrideRepo.clear(req.params("fingerprint"));
+            return "{\"status\":\"ok\"}";
+        });
+
+        http.put("/api/budgets/:category", (req, res) -> {
+            res.type("application/json");
+            Category category = parseCategory(req.params("category"));
+            if (!category.isAssignable()) {
+                throw new IllegalArgumentException("Cannot budget category: " + category);
+            }
+            BudgetRequest body = json.readValue(req.body(), BudgetRequest.class);
+            if (body.amount() == null || body.amount().signum() <= 0) {
+                throw new IllegalArgumentException("Budget amount must be positive");
+            }
+            budgetRepo.set(category, body.amount());
+            return "{\"status\":\"ok\"}";
+        });
+
+        http.delete("/api/budgets/:category", (req, res) -> {
+            res.type("application/json");
+            budgetRepo.clear(parseCategory(req.params("category")));
             return "{\"status\":\"ok\"}";
         });
 
@@ -166,6 +199,13 @@ public class App {
             return BankSource.valueOf(raw.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Unknown bank: " + raw);
+        }
+    }
+    private static Category parseCategory(String raw) {
+        try {
+            return Category.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unknown category: " + raw);
         }
     }
 

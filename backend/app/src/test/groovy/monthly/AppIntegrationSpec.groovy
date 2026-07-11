@@ -62,7 +62,47 @@ class AppIntegrationSpec extends Specification {
         get("/api/months/not-a-month/summary").statusCode() == 400
     }
 
-    // --- helpers ---
+    def "budgets can be set, listed, and cleared"() {
+        when:
+        def setResp = put("/api/budgets/groceries", '{"amount":400.00}')
+
+        then:
+        setResp.statusCode() == 200
+        new JsonSlurper().parseText(get("/api/budgets").body()).GROCERIES == 400.00
+
+        when:
+        delete("/api/budgets/groceries")
+
+        then:
+        new JsonSlurper().parseText(get("/api/budgets").body()).GROCERIES == null
+    }
+
+    def "the budget report returns a line for a configured category"() {
+        given:
+        put("/api/budgets/groceries", '{"amount":500.00}')
+
+        when:
+        def resp = get("/api/budgets/report?month=2026-06")
+        def report = new JsonSlurper().parseText(resp.body())
+
+        then:
+        resp.statusCode() == 200
+        report.month == "2026-06"
+        with(report.lines.find { it.category == "GROCERIES" }) {
+            it.limit == 500.00
+            it.overBudget == false
+        }
+
+        cleanup:
+        delete("/api/budgets/groceries")
+    }
+
+    def "a non-positive budget amount is rejected with 400"() {
+        expect:
+        put("/api/budgets/groceries", '{"amount":-5}').statusCode() == 400
+    }
+
+    // HELPERS
 
     private HttpResponse<String> get(String path) {
         client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}")).GET().build(),
@@ -79,5 +119,18 @@ class AppIntegrationSpec extends Specification {
         def stream = getClass().getResourceAsStream("/fixtures/${name}")
         assert stream != null : "fixture ${name} not found on classpath"
         stream.bytes
+    }
+
+    private HttpResponse<String> put(String path, String jsonBody) {
+        client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(jsonBody)).build(),
+                HttpResponse.BodyHandlers.ofString())
+    }
+
+    private HttpResponse<String> delete(String path) {
+        client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
+                .DELETE().build(),
+                HttpResponse.BodyHandlers.ofString())
     }
 }
