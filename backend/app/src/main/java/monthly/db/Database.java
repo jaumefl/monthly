@@ -53,6 +53,12 @@ public class Database {
                     fingerprint TEXT PRIMARY KEY
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS budgets (
+                    category     TEXT PRIMARY KEY,
+                    limit_amount TEXT NOT NULL
+                )
+                """);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create schema", e);
         }
