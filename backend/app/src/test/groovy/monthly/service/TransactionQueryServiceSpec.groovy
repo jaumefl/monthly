@@ -155,6 +155,25 @@ class TransactionQueryServiceSpec extends Specification {
         }
     }
 
+    def "monthCsv reflects overrides, transfer flags, and the summary"() {
+        given:
+        def groceries = new Transaction(LocalDate.of(2026, 6, 5), "MERCADONA", new BigDecimal("-30.00"), "EUR", BankSource.SANTANDER)
+        def mystery   = new Transaction(LocalDate.of(2026, 6, 8), "MYSTERY 42", new BigDecimal("-50.00"), "EUR", BankSource.SANTANDER)
+        def salary    = new Transaction(LocalDate.of(2026, 6, 1), "NOMINA", new BigDecimal("2000.00"), "EUR", BankSource.SANTANDER)
+        importService.importStatement(parserReturning([groceries, mystery, salary]), InputStream.nullInputStream())
+        overrideRepo.set(mystery.fingerprint(), Category.SHOPPING)
+        transferRepo.mark(salary.fingerprint())
+
+        when:
+        def csv = queryService.monthCsv(YearMonth.of(2026, 6))
+
+        then: "override wins, salary is flagged as a transfer, and the summary excludes it"
+        csv.startsWith("Date,Description,Category,Source,Amount,Currency,Transfer,Manual")
+        csv.contains("MYSTERY 42,SHOPPING,SANTANDER,-50.00,EUR,no,yes")
+        csv.contains("NOMINA,INCOME,SANTANDER,2000.00,EUR,yes,no")
+        csv.contains("Net,-80.00")
+    }
+
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
             source() >> BankSource.SANTANDER

@@ -141,7 +141,10 @@
   <section class="card">
     <div class="card__head">
       <h2 class="card__title">Transactions</h2>
-      <span class="pill" id="tx-count">0</span>
+      <div style="display:flex;align-items:center;gap:12px">
+          <span class="pill" id="tx-count">0</span>
+          <button id="export-btn" class="btn btn--secondary">Export CSV</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table id="tx-table">

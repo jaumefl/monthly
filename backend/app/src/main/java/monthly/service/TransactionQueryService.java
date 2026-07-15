@@ -1,6 +1,7 @@
 package monthly.service;
 
 import monthly.api.CategorizedTransaction;
+import monthly.api.MonthCsv;
 import monthly.domain.*;
 import monthly.domain.BudgetReport;
 import monthly.repository.BudgetRepository;
@@ -68,5 +69,9 @@ public class TransactionQueryService {
 
     public MonthSummary monthSummary(YearMonth month) {
         return MonthSummary.of(month, visibleTransactions(month));
+    }
+
+    public String monthCsv(YearMonth month) {
+        return MonthCsv.render(categorizedForMonth(month), monthSummary(month));
     }
 }

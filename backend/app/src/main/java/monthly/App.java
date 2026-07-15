@@ -94,6 +94,14 @@ public class App {
             return queryService.monthSummary(month);
         }, json::writeValueAsString);
 
+        http.get("/api/months/:yearMonth/export.csv", (req, res) -> {
+            YearMonth month = YearMonth.parse(req.params("yearMonth"));
+            String csv = queryService.monthCsv(month);
+            res.type("text/csv");
+            res.header("Content-Disposition", "attachment; filename=\"monthly-" + month + ".csv\"");
+            return csv;
+        });
+
         http.get("/api/comparison", (req, res) -> {
             res.type("application/json");
             String monthParam = req.queryParams("month");
