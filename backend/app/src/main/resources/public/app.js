@@ -428,6 +428,17 @@ async function importStatement() {
 
 $('import-btn').addEventListener('click', importStatement);
 
+$('export-btn').addEventListener('click', () => {
+    const ym = currentYM();
+    if (!ym) return;
+    const a = document.createElement('a');
+    a.href = `/api/months/${ym}/export.csv`;
+    a.download = `monthly-${ym}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+});
+
 /* ============================================================
    INIT
    ============================================================ */

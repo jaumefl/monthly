@@ -102,6 +102,19 @@ class AppIntegrationSpec extends Specification {
         put("/api/budgets/groceries", '{"amount":-5}').statusCode() == 400
     }
 
+    def "the CSV export endpoint returns a downloadable file for the month"() {
+        when:
+        def resp = get("/api/months/2026-06/export.csv")
+
+        then:
+        resp.statusCode() == 200
+        resp.headers().firstValue("Content-Type").get().startsWith("text/csv")
+        resp.headers().firstValue("Content-Disposition").get().contains("attachment")
+        resp.body().startsWith("Date,Description,Category,Source,Amount,Currency,Transfer,Manual")
+        resp.body().contains("Income,")
+    }
+
+
     // HELPERS
 
     private HttpResponse<String> get(String path) {
