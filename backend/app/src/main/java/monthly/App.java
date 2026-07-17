@@ -112,6 +112,11 @@ public class App {
             return MonthComparison.of(queryService.categoryBreakdown(month), queryService.categoryBreakdown(baseline));
         }, json::writeValueAsString);
 
+        http.get("/api/recurring", (req, res) -> {
+            res.type("application/json");
+            return queryService.recurring();
+        }, json::writeValueAsString);
+
         http.get("/api/categories", (req, res) -> {
             res.type("application/json");
             return Arrays.stream(Category.values())

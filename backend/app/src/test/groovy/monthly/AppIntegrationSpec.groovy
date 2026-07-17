@@ -114,6 +114,16 @@ class AppIntegrationSpec extends Specification {
         resp.body().contains("Income,")
     }
 
+    def "the recurring endpoint returns a JSON array"() {
+        when:
+        def resp = get("/api/recurring")
+
+        then:
+        resp.statusCode() == 200
+        resp.headers().firstValue("Content-Type").get().startsWith("application/json")
+        new JsonSlurper().parseText(resp.body()) instanceof List
+    }
+
 
     // HELPERS
 
