@@ -114,6 +114,27 @@ class SqliteTransactionRepositorySpec extends Specification {
         result*.operationDate() == [LocalDate.of(2026, 6, 20), LocalDate.of(2026, 6, 3)]
     }
 
+    def "findAll returns every transaction across months and banks, newest first"() {
+        given:
+        repository.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 10), "May tx",  new BigDecimal("-10.00"), "EUR", BankSource.SANTANDER),
+                new Transaction(LocalDate.of(2026, 7, 2),  "July tx", new BigDecimal("-20.00"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 1),  "June tx", new BigDecimal("-30.00"), "EUR", BankSource.SANTANDER),
+        ])
+
+        when:
+        def result = repository.findAll()
+
+        then:
+        result.size() == 3
+        result*.operationDate() == [LocalDate.of(2026, 7, 2), LocalDate.of(2026, 6, 1), LocalDate.of(2026, 5, 10)]
+    }
+
+    def "findAll returns an empty list when there are no transactions"() {
+        expect:
+        repository.findAll().isEmpty()
+    }
+
     private int rowCount() {
         def rs = database.connection().createStatement().executeQuery("SELECT COUNT(*) FROM transactions")
         rs.getInt(1)

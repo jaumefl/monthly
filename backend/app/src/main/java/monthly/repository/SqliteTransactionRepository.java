@@ -83,4 +83,29 @@ public class SqliteTransactionRepository implements TransactionRepository {
         }
         return result;
     }
+
+    @Override
+    public List<Transaction> findAll() {
+        String sql = """
+            SELECT operation_date, description, amount, currency, source
+            FROM transactions
+            ORDER BY operation_date DESC
+            """;
+        List<Transaction> result = new ArrayList<>();
+        try (PreparedStatement stmt = database.connection().prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                result.add(new Transaction(
+                        LocalDate.parse(rs.getString("operation_date")),
+                        rs.getString("description"),
+                        new BigDecimal(rs.getString("amount")),
+                        rs.getString("currency"),
+                        BankSource.valueOf(rs.getString("source"))
+                ));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to query transactions", e);
+        }
+        return result;
+    }
 }
