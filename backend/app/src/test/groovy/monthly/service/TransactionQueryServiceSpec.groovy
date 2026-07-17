@@ -174,6 +174,36 @@ class TransactionQueryServiceSpec extends Specification {
         csv.contains("Net,-80.00")
     }
 
+    def "recurring detects a subscription repeating across consecutive months"() {
+        given:
+        txRepo.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 7, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 10), "MERCADONA",   new BigDecimal("-42.10"), "EUR", BankSource.SANTANDER),
+        ])
+
+        when:
+        def series = queryService.recurring()
+
+        then:
+        series.size() == 1
+        series[0].label() == "netflix"
+        series[0].occurrences() == 3
+    }
+
+    def "recurring ignores transactions flagged as transfers"() {
+        given:
+        def moveMay = new Transaction(LocalDate.of(2026, 5, 1), "TRASPASO A REVOLUT", new BigDecimal("-200.00"), "EUR", BankSource.IMAGINBANK)
+        def moveJun = new Transaction(LocalDate.of(2026, 6, 1), "TRASPASO A REVOLUT", new BigDecimal("-200.00"), "EUR", BankSource.IMAGINBANK)
+        txRepo.saveAll([moveMay, moveJun])
+        transferRepo.mark(moveMay.fingerprint())
+        transferRepo.mark(moveJun.fingerprint())
+
+        expect:
+        queryService.recurring().isEmpty()
+    }
+
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
             source() >> BankSource.SANTANDER

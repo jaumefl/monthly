@@ -21,6 +21,7 @@ public class TransactionQueryService {
     private final TransactionCategorizer categorizer;
     private final TransferRepository transfers;
     private final BudgetRepository budgets;
+    private final RecurringDetector recurringDetector = new RecurringDetector();
 
     public TransactionQueryService(TransactionRepository transactions,
                                    CategoryOverrideRepository overrides,
@@ -73,5 +74,15 @@ public class TransactionQueryService {
 
     public String monthCsv(YearMonth month) {
         return MonthCsv.render(categorizedForMonth(month), monthSummary(month));
+    }
+
+    /** Every recurring payment series detected across the full history,
+     *  excluding transactions the user flagged as transfers. */
+    public List<RecurringSeries> recurring() {
+        Set<String> transferFps = transfers.findAll();
+        List<Transaction> visible = transactions.findAll().stream()
+                .filter(tx -> !transferFps.contains(tx.fingerprint()))
+                .toList();
+        return recurringDetector.detect(visible);
     }
 }
