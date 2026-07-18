@@ -421,6 +421,7 @@ async function importStatement() {
     $('file').value    = '';
     $('file-name').textContent = 'No file chosen';
     await loadMonth();
+    await loadRecurring();
   } catch (err) {
     status.textContent = `Import failed: ${err.message}`;
   }
@@ -440,7 +441,59 @@ $('export-btn').addEventListener('click', () => {
 });
 
 /* ============================================================
+   RECURRING PAYMENTS
+   Cross-month insight from /api/recurring (not month-scoped).
+   ============================================================ */
+const monthFmt = new Intl.DateTimeFormat('en-GB', { month: 'short', year: '2-digit' });
+
+function formatMonth(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    return monthFmt.format(new Date(y, m - 1, 1));
+}
+
+function renderRecurring(series) {
+    const list = $('recurring-list');
+    list.innerHTML = '';
+    $('recurring-empty').hidden = series.length > 0;
+    if (!series.length) return;
+
+    /* Most frequent first, then larger amounts. */
+    series.sort((a, b) => b.months.length - a.months.length
+        || Math.abs(b.amount) - Math.abs(a.amount));
+
+    for (const s of series) {
+        const months = s.months.map(formatMonth).join(', ');
+        const li = document.createElement('li');
+        li.className = 'recurring-item';
+        li.innerHTML = `
+      <div class="recurring-item__row">
+        <span class="recurring-item__desc">${escapeHtml(s.label)}</span>
+        <span class="recurring-item__amount">${euro.format(s.amount)}</span>
+      </div>
+      <div class="recurring-item__meta">
+        <span class="pill">${s.months.length}×</span>
+        <span>${escapeHtml(s.source)}</span>
+        <span>·</span>
+        <span>${months}</span>
+      </div>
+    `;
+        list.appendChild(li);
+    }
+}
+
+async function loadRecurring() {
+    try {
+        const res = await fetch('/api/recurring');
+        if (!res.ok) throw new Error(`Recurring: ${res.status}`);
+        renderRecurring(await res.json());
+    } catch (err) {
+        console.error('Failed to load recurring payments:', err);
+    }
+}
+
+/* ============================================================
    INIT
    ============================================================ */
 initYearSelect();
 loadMonth();
+loadRecurring();
