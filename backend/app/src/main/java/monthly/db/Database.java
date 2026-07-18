@@ -59,6 +59,12 @@ public class Database {
                     limit_amount TEXT NOT NULL
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS recurring_names (
+                    series_key TEXT PRIMARY KEY,
+                    name       TEXT NOT NULL
+                )
+                """);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create schema", e);
         }
