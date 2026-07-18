@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import monthly.api.CategoryRequest;
 import monthly.api.MonthComparison;
 import monthly.api.BudgetRequest;
+import monthly.api.RecurringNameRequest;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Category;
@@ -22,6 +23,8 @@ import monthly.repository.SqliteTransferRepository;
 import monthly.repository.TransferRepository;
 import monthly.repository.SqliteBudgetRepository;
 import monthly.repository.BudgetRepository;
+import monthly.repository.RecurringNameRepository;
+import monthly.repository.SqliteRecurringNameRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
 import spark.Service;
@@ -42,6 +45,7 @@ public class App {
     private final TransferRepository transferRepo;
     private final BudgetRepository budgetRepo;
     private final ObjectMapper json;
+    private final RecurringNameRepository recurringNameRepo;
 
     public App(Database database, int port) {
         database.createSchema();
@@ -52,14 +56,15 @@ public class App {
         this.importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
         this.budgetRepo = new SqliteBudgetRepository(database);
-        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo);
-
+        this.recurringNameRepo = new SqliteRecurringNameRepository(database);
+        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo, recurringNameRepo);
         this.json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         this.requestedPort = port;
         this.http = Service.ignite();
+
     }
 
     /** Starts the server and blocks until it is ready to accept requests. */
@@ -116,6 +121,29 @@ public class App {
             res.type("application/json");
             return queryService.recurring();
         }, json::writeValueAsString);
+
+        http.put("/api/recurring/name", (req, res) -> {
+            res.type("application/json");
+            RecurringNameRequest body = json.readValue(req.body(), RecurringNameRequest.class);
+            if (body.key() == null || body.key().isBlank()) {
+                throw new IllegalArgumentException("key is required");
+            }
+            if (body.name() == null || body.name().isBlank()) {
+                throw new IllegalArgumentException("name is required");
+            }
+            recurringNameRepo.set(body.key(), body.name().trim());
+            return "{\"status\":\"ok\"}";
+        });
+
+        http.delete("/api/recurring/name", (req, res) -> {
+            res.type("application/json");
+            RecurringNameRequest body = json.readValue(req.body(), RecurringNameRequest.class);
+            if (body.key() == null || body.key().isBlank()) {
+                throw new IllegalArgumentException("key is required");
+            }
+            recurringNameRepo.clear(body.key());
+            return "{\"status\":\"ok\"}";
+        });
 
         http.get("/api/categories", (req, res) -> {
             res.type("application/json");

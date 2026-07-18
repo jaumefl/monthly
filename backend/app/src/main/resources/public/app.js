@@ -421,6 +421,7 @@ async function importStatement() {
     $('file').value    = '';
     $('file-name').textContent = 'No file chosen';
     await loadMonth();
+    await loadRecurring();
   } catch (err) {
     status.textContent = `Import failed: ${err.message}`;
   }
@@ -440,7 +441,89 @@ $('export-btn').addEventListener('click', () => {
 });
 
 /* ============================================================
+   RECURRING PAYMENTS
+   Cross-month insight from /api/recurring (not month-scoped).
+   ============================================================ */
+const monthFmt = new Intl.DateTimeFormat('en-GB', { month: 'short', year: '2-digit' });
+
+function formatMonth(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    return monthFmt.format(new Date(y, m - 1, 1));
+}
+
+function renderRecurring(series) {
+    const list = $('recurring-list');
+    list.innerHTML = '';
+    $('recurring-empty').hidden = series.length > 0;
+    if (!series.length) return;
+
+    /* Most frequent first, then larger amounts. */
+    series.sort((a, b) => b.months.length - a.months.length
+        || Math.abs(b.amount) - Math.abs(a.amount));
+
+    for (const s of series) {
+        const months = s.months.map(formatMonth).join(', ');
+        const li = document.createElement('li');
+        li.className = 'recurring-item';
+        li.dataset.key = s.key;
+        li.dataset.name = s.name;
+        li.innerHTML = `
+      <div class="recurring-item__row">
+        <span class="recurring-item__desc">${escapeHtml(s.name)}</span>
+        <span class="recurring-item__amount">${euro.format(s.amount)}</span>
+      </div>
+      <div class="recurring-item__meta">
+        <span class="pill">${s.months.length}×</span>
+        <span>${escapeHtml(s.source)}</span>
+        <span>·</span>
+        <span>${months}</span>
+        <button class="recurring-item__rename" type="button" aria-label="Rename">Rename</button>
+      </div>
+    `;
+        list.appendChild(li);
+    }
+}
+
+async function loadRecurring() {
+    try {
+        const res = await fetch('/api/recurring');
+        if (!res.ok) throw new Error(`Recurring: ${res.status}`);
+        renderRecurring(await res.json());
+    } catch (err) {
+        console.error('Failed to load recurring payments:', err);
+    }
+}
+async function renameRecurring(key, name) {
+    const res = await fetch('/api/recurring/name', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, name }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+/* Delegated so it survives list re-renders */
+$('recurring-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.recurring-item__rename');
+    if (!btn) return;
+    const item = btn.closest('.recurring-item');
+    const key = item.dataset.key;
+    const current = item.dataset.name || '';
+    const name = window.prompt('Rename this recurring payment:', current);
+    if (name === null) return;                     // cancelled
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === current) return;
+    try {
+        await renameRecurring(key, trimmed);
+        await loadRecurring();
+    } catch (err) {
+        console.error('Rename failed:', err);
+    }
+});
+
+/* ============================================================
    INIT
    ============================================================ */
 initYearSelect();
 loadMonth();
+loadRecurring();
