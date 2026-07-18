@@ -4,6 +4,7 @@ import monthly.db.Database
 import monthly.domain.*
 import monthly.parser.BankStatementParser
 import monthly.repository.SqliteCategoryOverrideRepository
+import monthly.repository.SqliteRecurringNameRepository
 import monthly.repository.SqliteTransactionRepository
 import monthly.repository.SqliteTransferRepository
 import monthly.repository.SqliteBudgetRepository
@@ -22,6 +23,7 @@ class TransactionQueryServiceSpec extends Specification {
     ImportService importService
     SqliteTransferRepository transferRepo
     SqliteBudgetRepository budgetRepo
+    SqliteRecurringNameRepository recurringNameRepo
 
     def setup() {
         database = Database.inMemory()
@@ -30,7 +32,8 @@ class TransactionQueryServiceSpec extends Specification {
         overrideRepo = new SqliteCategoryOverrideRepository(database)
         transferRepo = new SqliteTransferRepository(database)
         budgetRepo = new SqliteBudgetRepository(database)
-        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo, budgetRepo)
+        recurringNameRepo = new SqliteRecurringNameRepository(database)
+        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo, budgetRepo, recurringNameRepo)
         importService = new ImportService(txRepo)
     }
 
@@ -189,7 +192,8 @@ class TransactionQueryServiceSpec extends Specification {
         then:
         series.size() == 1
         series[0].label() == "netflix"
-        series[0].occurrences() == 3
+        series[0].name() == "netflix"          // no custom name → falls back to label
+        series[0].months().size() == 3
     }
 
     def "recurring ignores transactions flagged as transfers"() {
@@ -204,6 +208,23 @@ class TransactionQueryServiceSpec extends Specification {
         queryService.recurring().isEmpty()
     }
 
+    def "recurring applies a saved custom name"() {
+        given:
+        txRepo.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 3), "COMPRA APPLE.COM/BILL CORK", new BigDecimal("-10.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 3), "COMPRA APPLE.COM/BILL CORK", new BigDecimal("-10.99"), "EUR", BankSource.REVOLUT),
+        ])
+        def key = queryService.recurring()[0].key()
+        recurringNameRepo.set(key, "Apple Music")
+
+        when:
+        def series = queryService.recurring()
+
+        then:
+        series.size() == 1
+        series[0].label() == "compra apple com bill cork"
+        series[0].name() == "Apple Music"
+    }
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
             source() >> BankSource.SANTANDER

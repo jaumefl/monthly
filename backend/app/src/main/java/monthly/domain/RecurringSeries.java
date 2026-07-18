@@ -1,6 +1,7 @@
 package monthly.domain;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -40,5 +41,14 @@ public record RecurringSeries(
             if (run >= minRun) return true;
         }
         return false;
+    }
+
+    /**
+     * Stable identity for this series (source + label + rounded amount), used to
+     * attach a user-chosen display name that survives re-imports.
+     */
+    public String key() {
+        return source.name() + '|' + label + '|'
+                + amount.setScale(0, RoundingMode.HALF_UP).toPlainString();
     }
 }

@@ -2,12 +2,15 @@ package monthly.service;
 
 import monthly.api.CategorizedTransaction;
 import monthly.api.MonthCsv;
+import monthly.api.RecurringView;
 import monthly.domain.*;
 import monthly.domain.BudgetReport;
 import monthly.repository.BudgetRepository;
 import monthly.repository.CategoryOverrideRepository;
 import monthly.repository.TransactionRepository;
 import monthly.repository.TransferRepository;
+import monthly.repository.RecurringNameRepository;
+
 
 import java.time.YearMonth;
 import java.util.List;
@@ -21,18 +24,21 @@ public class TransactionQueryService {
     private final TransactionCategorizer categorizer;
     private final TransferRepository transfers;
     private final BudgetRepository budgets;
+    private final RecurringNameRepository recurringNames;
     private final RecurringDetector recurringDetector = new RecurringDetector();
 
     public TransactionQueryService(TransactionRepository transactions,
                                    CategoryOverrideRepository overrides,
                                    TransactionCategorizer categorizer,
                                    TransferRepository transfers,
-                                   BudgetRepository budgets) {
+                                   BudgetRepository budgets,
+                                   RecurringNameRepository recurringNames) {
         this.transactions = transactions;
         this.overrides = overrides;
         this.transfers = transfers;
         this.categorizer = categorizer;
         this.budgets = budgets;
+        this.recurringNames = recurringNames;
     }
 
     public CategoryBreakdown categoryBreakdown(YearMonth month) {
@@ -77,12 +83,16 @@ public class TransactionQueryService {
     }
 
     /** Every recurring payment series detected across the full history,
-     *  excluding transactions the user flagged as transfers. */
-    public List<RecurringSeries> recurring() {
+     *  excluding transactions the user flagged as transfers, with any saved
+     *  custom name resolved. */
+    public List<RecurringView> recurring() {
         Set<String> transferFps = transfers.findAll();
         List<Transaction> visible = transactions.findAll().stream()
                 .filter(tx -> !transferFps.contains(tx.fingerprint()))
                 .toList();
-        return recurringDetector.detect(visible);
+        Map<String, String> names = recurringNames.findAll();
+        return recurringDetector.detect(visible).stream()
+                .map(s -> RecurringView.of(s, names))
+                .toList();
     }
 }

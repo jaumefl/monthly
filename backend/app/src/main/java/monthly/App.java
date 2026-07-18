@@ -22,6 +22,8 @@ import monthly.repository.SqliteTransferRepository;
 import monthly.repository.TransferRepository;
 import monthly.repository.SqliteBudgetRepository;
 import monthly.repository.BudgetRepository;
+import monthly.repository.RecurringNameRepository;
+import monthly.repository.SqliteRecurringNameRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
 import spark.Service;
@@ -42,6 +44,7 @@ public class App {
     private final TransferRepository transferRepo;
     private final BudgetRepository budgetRepo;
     private final ObjectMapper json;
+    private final RecurringNameRepository recurringNameRepo;
 
     public App(Database database, int port) {
         database.createSchema();
@@ -52,14 +55,15 @@ public class App {
         this.importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
         this.budgetRepo = new SqliteBudgetRepository(database);
-        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo);
-
+        this.recurringNameRepo = new SqliteRecurringNameRepository(database);
+        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo, recurringNameRepo);
         this.json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         this.requestedPort = port;
         this.http = Service.ignite();
+
     }
 
     /** Starts the server and blocks until it is ready to accept requests. */
