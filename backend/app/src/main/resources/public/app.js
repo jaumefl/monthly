@@ -465,9 +465,11 @@ function renderRecurring(series) {
         const months = s.months.map(formatMonth).join(', ');
         const li = document.createElement('li');
         li.className = 'recurring-item';
+        li.dataset.key = s.key;
+        li.dataset.name = s.name;
         li.innerHTML = `
       <div class="recurring-item__row">
-        <span class="recurring-item__desc">${escapeHtml(s.label)}</span>
+        <span class="recurring-item__desc">${escapeHtml(s.name)}</span>
         <span class="recurring-item__amount">${euro.format(s.amount)}</span>
       </div>
       <div class="recurring-item__meta">
@@ -475,6 +477,7 @@ function renderRecurring(series) {
         <span>${escapeHtml(s.source)}</span>
         <span>·</span>
         <span>${months}</span>
+        <button class="recurring-item__rename" type="button" aria-label="Rename">Rename</button>
       </div>
     `;
         list.appendChild(li);
@@ -490,6 +493,33 @@ async function loadRecurring() {
         console.error('Failed to load recurring payments:', err);
     }
 }
+async function renameRecurring(key, name) {
+    const res = await fetch('/api/recurring/name', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, name }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+/* Delegated so it survives list re-renders */
+$('recurring-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.recurring-item__rename');
+    if (!btn) return;
+    const item = btn.closest('.recurring-item');
+    const key = item.dataset.key;
+    const current = item.dataset.name || '';
+    const name = window.prompt('Rename this recurring payment:', current);
+    if (name === null) return;                     // cancelled
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === current) return;
+    try {
+        await renameRecurring(key, trimmed);
+        await loadRecurring();
+    } catch (err) {
+        console.error('Rename failed:', err);
+    }
+});
 
 /* ============================================================
    INIT

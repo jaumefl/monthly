@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import monthly.api.CategoryRequest;
 import monthly.api.MonthComparison;
 import monthly.api.BudgetRequest;
+import monthly.api.RecurringNameRequest;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Category;
@@ -120,6 +121,29 @@ public class App {
             res.type("application/json");
             return queryService.recurring();
         }, json::writeValueAsString);
+
+        http.put("/api/recurring/name", (req, res) -> {
+            res.type("application/json");
+            RecurringNameRequest body = json.readValue(req.body(), RecurringNameRequest.class);
+            if (body.key() == null || body.key().isBlank()) {
+                throw new IllegalArgumentException("key is required");
+            }
+            if (body.name() == null || body.name().isBlank()) {
+                throw new IllegalArgumentException("name is required");
+            }
+            recurringNameRepo.set(body.key(), body.name().trim());
+            return "{\"status\":\"ok\"}";
+        });
+
+        http.delete("/api/recurring/name", (req, res) -> {
+            res.type("application/json");
+            RecurringNameRequest body = json.readValue(req.body(), RecurringNameRequest.class);
+            if (body.key() == null || body.key().isBlank()) {
+                throw new IllegalArgumentException("key is required");
+            }
+            recurringNameRepo.clear(body.key());
+            return "{\"status\":\"ok\"}";
+        });
 
         http.get("/api/categories", (req, res) -> {
             res.type("application/json");

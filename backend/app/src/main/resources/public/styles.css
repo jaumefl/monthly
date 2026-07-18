@@ -760,3 +760,14 @@ tbody tr:hover { background: var(--surface-hover); }
 .recurring-item__desc { font-weight: 600; text-transform: capitalize; }
 .recurring-item__amount { font-variant-numeric: tabular-nums; font-weight: 600; }
 .recurring-item__meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--text-muted); font-size: 0.8rem; }
+.recurring-item__rename {
+    margin-left: auto;
+    font: inherit; font-size: 0.75rem; font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.recurring-item__rename:hover { color: var(--text); background: var(--surface-subtle); }

@@ -133,6 +133,15 @@ class AppIntegrationSpec extends Specification {
         expect:
         put("/api/recurring/name", '{"name":"Netflix"}').statusCode() == 400
     }
+    def "a recurring name can be saved"() {
+        expect:
+        put("/api/recurring/name", '{"key":"REVOLUT|netflix|-10","name":"Netflix"}').statusCode() == 200
+    }
+
+    def "saving a recurring name requires a key"() {
+        expect:
+        put("/api/recurring/name", '{"name":"Netflix"}').statusCode() == 400
+    }
 
 
     // HELPERS
