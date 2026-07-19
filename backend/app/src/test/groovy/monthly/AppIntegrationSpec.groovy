@@ -133,14 +133,15 @@ class AppIntegrationSpec extends Specification {
         expect:
         put("/api/recurring/name", '{"name":"Netflix"}').statusCode() == 400
     }
-    def "a recurring name can be saved"() {
-        expect:
-        put("/api/recurring/name", '{"key":"REVOLUT|netflix|-10","name":"Netflix"}').statusCode() == 200
-    }
 
-    def "saving a recurring name requires a key"() {
-        expect:
-        put("/api/recurring/name", '{"name":"Netflix"}').statusCode() == 400
+    def "the categorization suggestions endpoint returns a JSON array"() {
+        when:
+        def resp = get("/api/categorization/suggestions")
+
+        then:
+        resp.statusCode() == 200
+        resp.headers().firstValue("Content-Type").get().startsWith("application/json")
+        new JsonSlurper().parseText(resp.body()) instanceof List
     }
 
 

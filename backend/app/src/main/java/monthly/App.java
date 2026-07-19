@@ -145,6 +145,12 @@ public class App {
             return "{\"status\":\"ok\"}";
         });
 
+        http.get("/api/categorization/suggestions", (req, res) -> {
+            res.type("application/json");
+            return queryService.keywordSuggestions();
+        }, json::writeValueAsString);
+
+
         http.get("/api/categories", (req, res) -> {
             res.type("application/json");
             return Arrays.stream(Category.values())
