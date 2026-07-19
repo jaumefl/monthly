@@ -225,6 +225,43 @@ class TransactionQueryServiceSpec extends Specification {
         series[0].label() == "compra apple com bill cork"
         series[0].name() == "Apple Music"
     }
+
+    def "keywordSuggestions surfaces a merchant repeatedly overridden out of OTHER"() {
+        given: "a gym the categorizer has no rule for, corrected two months running"
+        def may  = new Transaction(LocalDate.of(2026, 5, 3), "MOLLIE FITNESS 4412", new BigDecimal("-39.00"), "EUR", BankSource.REVOLUT)
+        def june = new Transaction(LocalDate.of(2026, 6, 3), "MOLLIE FITNESS 5518", new BigDecimal("-39.00"), "EUR", BankSource.REVOLUT)
+        and: "and a merchant the keyword map already handles"
+        def shop = new Transaction(LocalDate.of(2026, 6, 5), "MERCADONA", new BigDecimal("-30.00"), "EUR", BankSource.SANTANDER)
+        txRepo.saveAll([may, june, shop])
+        overrideRepo.set(may.fingerprint(), Category.HEALTH)
+        overrideRepo.set(june.fingerprint(), Category.HEALTH)
+        overrideRepo.set(shop.fingerprint(), Category.EATING_OUT)
+
+        when:
+        def suggestions = queryService.keywordSuggestions()
+
+        then: "only the gap in the map is reported, not the mis-rule"
+        suggestions.size() == 1
+        with(suggestions[0]) {
+            merchant() == "mollie fitness"
+            category() == Category.HEALTH
+            occurrences() == 2
+        }
+    }
+
+    def "keywordSuggestions ignores transactions flagged as transfers"() {
+        given:
+        def may  = new Transaction(LocalDate.of(2026, 5, 1), "BIZUM A LAURA", new BigDecimal("-60.00"), "EUR", BankSource.IMAGINBANK)
+        def june = new Transaction(LocalDate.of(2026, 6, 1), "BIZUM A LAURA", new BigDecimal("-60.00"), "EUR", BankSource.IMAGINBANK)
+        txRepo.saveAll([may, june])
+        [may, june].each {
+            overrideRepo.set(it.fingerprint(), Category.OTHER)
+            transferRepo.mark(it.fingerprint())
+        }
+
+        expect: "money moved between your own accounts is not a merchant"
+        queryService.keywordSuggestions().isEmpty()
+    }
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
             source() >> BankSource.SANTANDER

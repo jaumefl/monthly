@@ -26,6 +26,7 @@ public class TransactionQueryService {
     private final BudgetRepository budgets;
     private final RecurringNameRepository recurringNames;
     private final RecurringDetector recurringDetector = new RecurringDetector();
+    private final KeywordSuggester keywordSuggester = new KeywordSuggester();
 
     public TransactionQueryService(TransactionRepository transactions,
                                    CategoryOverrideRepository overrides,
@@ -72,6 +73,14 @@ public class TransactionQueryService {
                 .toList();
     }
 
+    /** Every transaction on record except those manually flagged as transfers. */
+    private List<Transaction> visibleHistory() {
+        Set<String> transferFps = transfers.findAll();
+        return transactions.findAll().stream()
+                .filter(tx -> !transferFps.contains(tx.fingerprint()))
+                .toList();
+    }
+
 
 
     public MonthSummary monthSummary(YearMonth month) {
@@ -86,13 +95,18 @@ public class TransactionQueryService {
      *  excluding transactions the user flagged as transfers, with any saved
      *  custom name resolved. */
     public List<RecurringView> recurring() {
-        Set<String> transferFps = transfers.findAll();
-        List<Transaction> visible = transactions.findAll().stream()
-                .filter(tx -> !transferFps.contains(tx.fingerprint()))
-                .toList();
         Map<String, String> names = recurringNames.findAll();
-        return recurringDetector.detect(visible).stream()
+        return recurringDetector.detect(visibleHistory()).stream()
                 .map(s -> RecurringView.of(s, names))
                 .toList();
     }
+
+    /** Merchants the keyword map keeps missing, ranked by how often you have
+     *  corrected them by hand. Transfers are excluded — moving money between
+     *  your own accounts is not a merchant worth a keyword rule. */
+    public List<KeywordSuggestion> keywordSuggestions() {
+        return keywordSuggester.suggest(visibleHistory(), overrides.findAll());
+    }
+
+
 }
