@@ -77,4 +77,35 @@ class BudgetReportSpec extends Specification {
         report.lines().size() == 1
         report.lines().first().category() == Category.GROCERIES
     }
+    def "spend exactly at the limit is not over budget"() {
+        given:
+        def breakdown = new CategoryBreakdown(ym,
+                [(Category.GROCERIES): new BigDecimal("400.00")] as Map,
+                new BigDecimal("400.00"))
+        def limits = [(Category.GROCERIES): new BigDecimal("400.00")]
+
+        when:
+        def line = BudgetReport.of(breakdown, limits).lines().first()
+
+        then:
+        !line.overBudget()
+        line.remaining()   == new BigDecimal("0.00")
+        line.percentUsed() == new BigDecimal("100.0")
+    }
+
+    def "a zero limit with spend is over budget without dividing by zero"() {
+        given:
+        def breakdown = new CategoryBreakdown(ym,
+                [(Category.SHOPPING): new BigDecimal("25.00")] as Map,
+                new BigDecimal("25.00"))
+        def limits = [(Category.SHOPPING): new BigDecimal("0.00")]
+
+        when:
+        def line = BudgetReport.of(breakdown, limits).lines().first()
+
+        then:
+        line.overBudget()
+        line.remaining()   == new BigDecimal("-25.00")
+        line.percentUsed() == BigDecimal.ZERO
+    }
 }
