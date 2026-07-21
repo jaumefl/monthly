@@ -245,7 +245,7 @@ class TransactionQueryServiceSpec extends Specification {
         with(suggestions[0]) {
             merchant() == "mollie fitness"
             category() == Category.HEALTH
-            occurrences() == 2
+            monthCount() == 2
         }
     }
 

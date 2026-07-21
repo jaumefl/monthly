@@ -1,10 +1,7 @@
 package monthly.domain;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.YearMonth;
+import java.util.*;
 
 /**
  * Mines the manual category overrides for gaps in the keyword map.
@@ -16,7 +13,7 @@ import java.util.Map;
 public final class KeywordSuggester {
 
     /** A merchant must be corrected this many times before it is worth a rule. */
-    public static final int MIN_OCCURRENCES = 2;
+    public static final int MIN_MONTHS = 2;
 
     private final TransactionCategorizer categorizer = new TransactionCategorizer();
 
@@ -35,17 +32,18 @@ public final class KeywordSuggester {
             if (merchant.isEmpty()) continue;
 
             String key = merchant + '|' + assigned.name();
-            tallies.computeIfAbsent(key, k -> new Tally(merchant, assigned)).count++;
+            tallies.computeIfAbsent(key, k -> new Tally(merchant, assigned)).months.add(tx.month());
         }
 
         List<KeywordSuggestion> result = new ArrayList<>();
         for (Tally tally : tallies.values()) {
-            if (tally.count >= MIN_OCCURRENCES) {
-                result.add(new KeywordSuggestion(tally.merchant, tally.category, tally.count));
+            if (tally.months.size() >= MIN_MONTHS) {
+                result.add(new KeywordSuggestion(tally.merchant, tally.category,
+                        List.copyOf(tally.months)));
             }
         }
         result.sort(Comparator
-                .comparingInt(KeywordSuggestion::occurrences).reversed()
+                .comparingInt(KeywordSuggestion::monthCount).reversed()
                 .thenComparing(KeywordSuggestion::merchant));
         return result;
     }
@@ -54,7 +52,7 @@ public final class KeywordSuggester {
     private static final class Tally {
         final String merchant;
         final Category category;
-        int count;
+        final SortedSet<YearMonth> months = new TreeSet<>();
 
         Tally(String merchant, Category category) {
             this.merchant = merchant;

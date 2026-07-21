@@ -18,6 +18,7 @@ It's a single-user app that runs locally, and I've been developing it test-first
 - **Handles transfers between my own accounts.** Transactions can be flagged as transfers so they're excluded from the spending graphs and don't show up as phantom income or expense.
 - **Idempotent imports.** Re-importing a `(bank, month)` pair replaces exactly that bank's transactions for that month, so repeated imports never double-count.
 - **Sets a monthly budget per category.** I can give any category a spending limit; the compare page shows a fill bar of actual spend against the limit, how much is left to reach it, and flags anything over budget in red.
+- **Tells me when the categorizer needs tuning.** Rather than guessing which merchants the keyword map misses, the app mines my own manual corrections: any merchant I've moved out of Other in two or more separate months is surfaced as a candidate keyword rule. Corrections within a single month are ignored, so a holiday's worth of one-off merchants doesn't pollute the map.
 
 ## Tech stack
 
@@ -72,6 +73,9 @@ Bank export ──▶ Parser ──▶ Transaction ──▶ Repository (SQLite)
 | `GET` | `/api/budgets` | Configured monthly limit per category |
 | `GET` | `/api/budgets/report?month=YYYY-MM` | Spend vs. limit per budgeted category |
 | `PUT` / `DELETE` | `/api/budgets/{category}` | Set or clear a category's budget |
+| `GET` | `/api/recurring` | Detected recurring payment series across all history |
+| `PUT` / `DELETE` | `/api/recurring/name` | Set or clear a custom name for a series |
+| `GET` | `/api/categorization/suggestions` | Merchants repeatedly re-categorized out of Other, with the months involved |
 
 ## Running it
 
@@ -125,4 +129,4 @@ monthly/
 
 ## Notes
 
-This is an evolving side project I use with my own accounts. It's deliberately scoped to a single local user with no authentication in this version, and the keyword categorizer is tuned to my own spending, so it's expected to need ongoing adjustment. Further categorization tuning is the main ongoing work.
+This is an evolving side project I use with my own accounts. It's deliberately scoped to a single local user with no authentication in this version, and the keyword categorizer is tuned to my own spending, so it's expected to need ongoing adjustment, which is why the app now surfaces its own blind spots from my correction history instead of relying on me to notice them.
