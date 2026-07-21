@@ -3,6 +3,7 @@ package monthly.domain
 import spock.lang.Specification
 
 import java.time.LocalDate
+import java.time.YearMonth
 
 class KeywordSuggesterSpec extends Specification {
 
@@ -28,7 +29,8 @@ class KeywordSuggesterSpec extends Specification {
         suggestions.size() == 1
         suggestions[0].merchant() == "mollie fitness"
         suggestions[0].category() == Category.HEALTH
-        suggestions[0].occurrences() == 2
+        suggestions[0].monthCount() == 2
+        suggestions[0].months() == [YearMonth.of(2026, 6), YearMonth.of(2026, 7)]
     }
 
     def "ignores a merchant the keyword map already classifies"() {
@@ -47,7 +49,7 @@ class KeywordSuggesterSpec extends Specification {
         suggester.suggest([tx("CARGO DESCONOCIDO XYZ")], [:]).isEmpty()
     }
 
-    def "requires at least #MIN occurrences before suggesting"() {
+    def "requires corrections in at least #MIN distinct months"() {
         given:
         def once = tx("ODD MERCHANT SL")
         def overrides = [(once.fingerprint()): Category.SHOPPING]
@@ -56,7 +58,7 @@ class KeywordSuggesterSpec extends Specification {
         suggester.suggest([once], overrides).isEmpty()
 
         where:
-        MIN = KeywordSuggester.MIN_OCCURRENCES
+        MIN = KeywordSuggester.MIN_MONTHS
     }
 
     def "splits one merchant into separate suggestions per overridden category"() {
@@ -74,10 +76,10 @@ class KeywordSuggesterSpec extends Specification {
         then: "only the category that clears the threshold survives"
         suggestions.size() == 1
         suggestions[0].category() == Category.SHOPPING
-        suggestions[0].occurrences() == 2
+        suggestions[0].monthCount() == 2
     }
 
-    def "orders suggestions by occurrences, most frequent first"() {
+    def "orders suggestions by month count, most frequent first"() {
         given:
         def gym = [tx("GYMBOX", "2026-05-03"), tx("GYMBOX", "2026-06-03")]
         def toll = [tx("TOLL ROAD AB", "2026-05-04"), tx("TOLL ROAD AB", "2026-06-04"),
@@ -102,5 +104,15 @@ class KeywordSuggesterSpec extends Specification {
 
         expect:
         suggester.suggest([a, b], overrides).isEmpty()
+    }
+    def "two corrections in the same month are not a recurring merchant"() {
+        given: "one trip, two visits, same month"
+        def first  = tx("COMPRA ALIPAY SHAKE SHACK", "2026-06-14")
+        def second = tx("COMPRA ALIPAY SHAKE SHACK", "2026-06-17")
+        def overrides = [(first.fingerprint()): Category.EATING_OUT,
+                         (second.fingerprint()): Category.EATING_OUT]
+
+        expect:
+        suggester.suggest([first, second], overrides).isEmpty()
     }
 }
