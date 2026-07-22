@@ -10,6 +10,7 @@ import monthly.repository.CategoryOverrideRepository;
 import monthly.repository.TransactionRepository;
 import monthly.repository.TransferRepository;
 import monthly.repository.RecurringNameRepository;
+import monthly.repository.RecurringDismissalRepository;
 
 
 import java.time.YearMonth;
@@ -27,19 +28,22 @@ public class TransactionQueryService {
     private final RecurringNameRepository recurringNames;
     private final RecurringDetector recurringDetector = new RecurringDetector();
     private final KeywordSuggester keywordSuggester = new KeywordSuggester();
+    private final RecurringDismissalRepository recurringDismissals;
 
     public TransactionQueryService(TransactionRepository transactions,
                                    CategoryOverrideRepository overrides,
                                    TransactionCategorizer categorizer,
                                    TransferRepository transfers,
                                    BudgetRepository budgets,
-                                   RecurringNameRepository recurringNames) {
+                                   RecurringNameRepository recurringNames,
+                                   RecurringDismissalRepository recurringDismissals) {
         this.transactions = transactions;
         this.overrides = overrides;
         this.transfers = transfers;
         this.categorizer = categorizer;
         this.budgets = budgets;
         this.recurringNames = recurringNames;
+        this.recurringDismissals = recurringDismissals;
     }
 
     public CategoryBreakdown categoryBreakdown(YearMonth month) {
@@ -92,11 +96,13 @@ public class TransactionQueryService {
     }
 
     /** Every recurring payment series detected across the full history,
-     *  excluding transactions the user flagged as transfers, with any saved
-     *  custom name resolved. */
+     *  excluding transactions the user flagged as transfers and series the
+     *  user dismissed as false positives, with any saved custom name resolved. */
     public List<RecurringView> recurring() {
         Map<String, String> names = recurringNames.findAll();
+        Set<String> dismissed = recurringDismissals.findAll();
         return recurringDetector.detect(visibleHistory()).stream()
+                .filter(s -> !dismissed.contains(s.key()))
                 .map(s -> RecurringView.of(s, names))
                 .toList();
     }

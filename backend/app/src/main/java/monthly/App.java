@@ -7,6 +7,7 @@ import monthly.api.CategoryRequest;
 import monthly.api.MonthComparison;
 import monthly.api.BudgetRequest;
 import monthly.api.RecurringNameRequest;
+import monthly.api.RecurringKeyRequest;
 import monthly.db.Database;
 import monthly.domain.BankSource;
 import monthly.domain.Category;
@@ -24,6 +25,8 @@ import monthly.repository.TransferRepository;
 import monthly.repository.SqliteBudgetRepository;
 import monthly.repository.BudgetRepository;
 import monthly.repository.RecurringNameRepository;
+import monthly.repository.RecurringDismissalRepository;
+import monthly.repository.SqliteRecurringDismissalRepository;
 import monthly.repository.SqliteRecurringNameRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
@@ -46,6 +49,7 @@ public class App {
     private final BudgetRepository budgetRepo;
     private final ObjectMapper json;
     private final RecurringNameRepository recurringNameRepo;
+    private final RecurringDismissalRepository recurringDismissalRepo;
 
     public App(Database database, int port) {
         database.createSchema();
@@ -53,11 +57,12 @@ public class App {
         TransactionRepository repository = new SqliteTransactionRepository(database);
         this.overrideRepo = new SqliteCategoryOverrideRepository(database);
         this.transferRepo = new SqliteTransferRepository(database);
+        this.recurringDismissalRepo = new SqliteRecurringDismissalRepository(database);
         this.importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
         this.budgetRepo = new SqliteBudgetRepository(database);
         this.recurringNameRepo = new SqliteRecurringNameRepository(database);
-        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo, recurringNameRepo);
+        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo, recurringNameRepo, recurringDismissalRepo);
         this.json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -142,6 +147,18 @@ public class App {
                 throw new IllegalArgumentException("key is required");
             }
             recurringNameRepo.clear(body.key());
+            return "{\"status\":\"ok\"}";
+        });
+
+        http.delete("/api/recurring", (req, res) -> {
+            res.type("application/json");
+            recurringDismissalRepo.dismiss(requireKey(req.body()));
+            return "{\"status\":\"ok\"}";
+        });
+
+        http.post("/api/recurring/restore", (req, res) -> {
+            res.type("application/json");
+            recurringDismissalRepo.restore(requireKey(req.body()));
             return "{\"status\":\"ok\"}";
         });
 
@@ -262,6 +279,15 @@ public class App {
             case REVOLUT    -> new RevolutParser();
             case IMAGINBANK -> new ImaginParser();
         };
+    }
+
+    /** Reads a {key} body and rejects a missing or blank key. */
+    private String requireKey(String body) throws com.fasterxml.jackson.core.JsonProcessingException {
+        RecurringKeyRequest request = json.readValue(body, RecurringKeyRequest.class);
+        if (request.key() == null || request.key().isBlank()) {
+            throw new IllegalArgumentException("key is required");
+        }
+        return request.key();
     }
 
     public static void main(String[] args) {

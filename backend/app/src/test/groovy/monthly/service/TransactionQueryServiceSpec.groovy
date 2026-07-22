@@ -4,6 +4,7 @@ import monthly.db.Database
 import monthly.domain.*
 import monthly.parser.BankStatementParser
 import monthly.repository.SqliteCategoryOverrideRepository
+import monthly.repository.SqliteRecurringDismissalRepository
 import monthly.repository.SqliteRecurringNameRepository
 import monthly.repository.SqliteTransactionRepository
 import monthly.repository.SqliteTransferRepository
@@ -24,6 +25,7 @@ class TransactionQueryServiceSpec extends Specification {
     SqliteTransferRepository transferRepo
     SqliteBudgetRepository budgetRepo
     SqliteRecurringNameRepository recurringNameRepo
+    SqliteRecurringDismissalRepository recurringDismissalRepo
 
     def setup() {
         database = Database.inMemory()
@@ -33,8 +35,10 @@ class TransactionQueryServiceSpec extends Specification {
         transferRepo = new SqliteTransferRepository(database)
         budgetRepo = new SqliteBudgetRepository(database)
         recurringNameRepo = new SqliteRecurringNameRepository(database)
-        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo, budgetRepo, recurringNameRepo)
         importService = new ImportService(txRepo)
+        recurringDismissalRepo = new SqliteRecurringDismissalRepository(database)
+        queryService = new TransactionQueryService(txRepo, overrideRepo, new TransactionCategorizer(), transferRepo, budgetRepo, recurringNameRepo, recurringDismissalRepo)
+
     }
 
     def "a manually set category survives a re-import of the same month"() {
@@ -261,6 +265,38 @@ class TransactionQueryServiceSpec extends Specification {
 
         expect: "money moved between your own accounts is not a merchant"
         queryService.keywordSuggestions().isEmpty()
+    }
+    def "a dismissed series no longer shows up as recurring"() {
+        given:
+        txRepo.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 7, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+        ])
+        def key = queryService.recurring()[0].key()
+
+        when:
+        recurringDismissalRepo.dismiss(key)
+
+        then:
+        queryService.recurring().isEmpty()
+    }
+
+    def "a restored series shows up again, keeping its custom name"() {
+        given:
+        txRepo.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+        ])
+        def key = queryService.recurring()[0].key()
+        recurringNameRepo.set(key, "Netflix Premium")
+        recurringDismissalRepo.dismiss(key)
+
+        when:
+        recurringDismissalRepo.restore(key)
+
+        then:
+        queryService.recurring()*.name() == ["Netflix Premium"]
     }
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
