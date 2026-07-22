@@ -65,6 +65,11 @@ public class Database {
                     name       TEXT NOT NULL
                 )
                 """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS recurring_dismissals (
+                    series_key TEXT PRIMARY KEY
+                )
+                """);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create schema", e);
         }
