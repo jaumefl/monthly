@@ -24,6 +24,8 @@ import monthly.repository.TransferRepository;
 import monthly.repository.SqliteBudgetRepository;
 import monthly.repository.BudgetRepository;
 import monthly.repository.RecurringNameRepository;
+import monthly.repository.RecurringDismissalRepository;
+import monthly.repository.SqliteRecurringDismissalRepository;
 import monthly.repository.SqliteRecurringNameRepository;
 import monthly.service.ImportService;
 import monthly.service.TransactionQueryService;
@@ -46,6 +48,7 @@ public class App {
     private final BudgetRepository budgetRepo;
     private final ObjectMapper json;
     private final RecurringNameRepository recurringNameRepo;
+    private final RecurringDismissalRepository recurringDismissalRepo;
 
     public App(Database database, int port) {
         database.createSchema();
@@ -53,11 +56,12 @@ public class App {
         TransactionRepository repository = new SqliteTransactionRepository(database);
         this.overrideRepo = new SqliteCategoryOverrideRepository(database);
         this.transferRepo = new SqliteTransferRepository(database);
+        this.recurringDismissalRepo = new SqliteRecurringDismissalRepository(database);
         this.importService = new ImportService(repository);
         TransactionCategorizer categorizer = new TransactionCategorizer();
         this.budgetRepo = new SqliteBudgetRepository(database);
         this.recurringNameRepo = new SqliteRecurringNameRepository(database);
-        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo, recurringNameRepo);
+        this.queryService = new TransactionQueryService(repository, overrideRepo, categorizer, transferRepo, budgetRepo, recurringNameRepo, recurringDismissalRepo);
         this.json = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
