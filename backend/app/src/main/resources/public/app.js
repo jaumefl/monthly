@@ -478,6 +478,11 @@ function renderRecurring(series) {
         <span>·</span>
         <span>${months}</span>
         <button class="recurring-item__rename" type="button" aria-label="Rename">Rename</button>
+        <button class="recurring-item__delete" type="button" aria-label="Not recurring" title="Not recurring">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M6.5 1a1 1 0 0 0-1 1V2.5H2.5a.5.5 0 0 0 0 1H3l.62 9.3A1.5 1.5 0 0 0 5.12 14h5.76a1.5 1.5 0 0 0 1.5-1.2l.62-9.3h.5a.5.5 0 0 0 0-1H10.5V2a1 1 0 0 0-1-1h-3zm0 1.5V2h3v.5h-3zM6 6a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4A.5.5 0 0 1 6 6zm4 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4A.5.5 0 0 1 10 6z"/>
+          </svg>
+        </button>
       </div>
     `;
         list.appendChild(li);
@@ -501,23 +506,45 @@ async function renameRecurring(key, name) {
     });
     if (!res.ok) throw new Error(await res.text());
 }
+async function dismissRecurring(key) {
+    const res = await fetch('/api/recurring', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+}
 
 /* Delegated so it survives list re-renders */
 $('recurring-list').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.recurring-item__rename');
-    if (!btn) return;
-    const item = btn.closest('.recurring-item');
+    const item = e.target.closest('.recurring-item');
+    if (!item) return;
     const key = item.dataset.key;
-    const current = item.dataset.name || '';
-    const name = window.prompt('Rename this recurring payment:', current);
-    if (name === null) return;                     // cancelled
-    const trimmed = name.trim();
-    if (!trimmed || trimmed === current) return;
-    try {
-        await renameRecurring(key, trimmed);
-        await loadRecurring();
-    } catch (err) {
-        console.error('Rename failed:', err);
+
+    if (e.target.closest('.recurring-item__rename')) {
+        const current = item.dataset.name || '';
+        const name = window.prompt('Rename this recurring payment:', current);
+        if (name === null) return;                 // cancelled
+        const trimmed = name.trim();
+        if (!trimmed || trimmed === current) return;
+        try {
+            await renameRecurring(key, trimmed);
+            await loadRecurring();
+        } catch (err) {
+            console.error('Rename failed:', err);
+        }
+        return;
+    }
+
+    if (e.target.closest('.recurring-item__delete')) {
+        const name = item.dataset.name || 'this payment';
+        if (!window.confirm(`Remove “${name}” from recurring payments?`)) return;
+        try {
+            await dismissRecurring(key);
+            await loadRecurring();
+        } catch (err) {
+            console.error('Dismiss failed:', err);
+        }
     }
 });
 
