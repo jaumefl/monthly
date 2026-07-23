@@ -134,6 +134,21 @@ class AppIntegrationSpec extends Specification {
         put("/api/recurring/name", '{"name":"Netflix"}').statusCode() == 400
     }
 
+    def "a recurring series can be dismissed"() {
+        expect:
+        deleteWithBody("/api/recurring", '{"key":"REVOLUT|netflix|-10"}').statusCode() == 200
+    }
+
+    def "dismissing a series requires a key"() {
+        expect:
+        deleteWithBody("/api/recurring", '{}').statusCode() == 400
+    }
+
+    def "a dismissed series can be restored"() {
+        expect:
+        postJson("/api/recurring/restore", '{"key":"REVOLUT|netflix|-10"}').statusCode() == 200
+    }
+
     def "the categorization suggestions endpoint returns a JSON array"() {
         when:
         def resp = get("/api/categorization/suggestions")
@@ -174,6 +189,19 @@ class AppIntegrationSpec extends Specification {
     private HttpResponse<String> delete(String path) {
         client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
                 .DELETE().build(),
+                HttpResponse.BodyHandlers.ofString())
+    }
+    private HttpResponse<String> deleteWithBody(String path, String jsonBody) {
+        client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
+                .header("Content-Type", "application/json")
+                .method("DELETE", HttpRequest.BodyPublishers.ofString(jsonBody)).build(),
+                HttpResponse.BodyHandlers.ofString())
+    }
+
+    private HttpResponse<String> postJson(String path, String jsonBody) {
+        client.send(HttpRequest.newBuilder(URI.create("http://localhost:${port}${path}"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build(),
                 HttpResponse.BodyHandlers.ofString())
     }
 }
