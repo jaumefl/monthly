@@ -771,3 +771,13 @@ tbody tr:hover { background: var(--surface-hover); }
     cursor: pointer;
 }
 .recurring-item__rename:hover { color: var(--text); background: var(--surface-subtle); }
+.recurring-item__delete {
+    display: inline-flex; align-items: center;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    cursor: pointer;
+}
+.recurring-item__delete:hover { color: var(--expense); background: var(--surface-subtle); }
