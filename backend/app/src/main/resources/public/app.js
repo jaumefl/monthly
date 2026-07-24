@@ -515,12 +515,23 @@ async function dismissRecurring(key) {
     if (!res.ok) throw new Error(await res.text());
 }
 
+let dismissedOpen = false;
+
+function updateDismissedToggle() {
+    const n = $('dismissed-list').children.length;
+    $('dismissed-toggle-label').textContent =
+        `${dismissedOpen ? 'Hide' : 'Show'} dismissed (${n})`;
+    $('dismissed-list').hidden = !dismissedOpen;
+    $('dismissed-toggle').setAttribute('aria-expanded', String(dismissedOpen));
+    $('dismissed-toggle').classList.toggle('is-open', dismissedOpen);
+}
+
 function renderDismissed(series) {
     const block = $('dismissed-block');
     const list = $('dismissed-list');
     list.innerHTML = '';
     block.hidden = series.length === 0;
-    if (!series.length) return;
+    if (!series.length) { dismissedOpen = false; updateDismissedToggle(); return; }
 
     series.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
 
@@ -545,6 +556,7 @@ function renderDismissed(series) {
     `;
         list.appendChild(li);
     }
+    updateDismissedToggle();
 }
 
 async function loadDismissed() {
@@ -599,6 +611,12 @@ $('recurring-list').addEventListener('click', async (e) => {
         }
     }
 });
+
+$('dismissed-toggle').addEventListener('click', () => {
+    dismissedOpen = !dismissedOpen;
+    updateDismissedToggle();
+});
+
 $('dismissed-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('.recurring-item__restore');
     if (!btn) return;

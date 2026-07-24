@@ -781,12 +781,18 @@ tbody tr:hover { background: var(--surface-hover); }
     cursor: pointer;
 }
 .recurring-item__delete:hover { color: var(--expense); background: var(--surface-subtle); }
-.recurring-dismissed__title {
-    margin: 16px 0 4px; font-size: 0.75rem; font-weight: 700;
+.recurring-dismissed__toggle {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 12px; padding-top: 12px; width: 100%;
+    font: inherit; font-size: 0.75rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.04em;
     color: var(--text-muted);
-    border-top: 1px solid var(--border); padding-top: 12px;
+    background: none; border: none; border-top: 1px solid var(--border);
+    cursor: pointer;
 }
+.recurring-dismissed__toggle:hover { color: var(--text); }
+.recurring-dismissed__caret { transition: transform 0.15s ease; }
+.recurring-dismissed__toggle.is-open .recurring-dismissed__caret { transform: rotate(90deg); }
 .recurring-item--dismissed { opacity: 0.65; }
 .recurring-item--dismissed .recurring-item__desc { text-decoration: line-through; }
 .recurring-item__restore {
@@ -800,3 +806,4 @@ tbody tr:hover { background: var(--surface-hover); }
     cursor: pointer;
 }
 .recurring-item__restore:hover { color: var(--text); background: var(--surface-subtle); }
+.recurring-list[hidden] { display: none; }
