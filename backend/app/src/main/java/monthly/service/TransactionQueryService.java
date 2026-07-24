@@ -107,6 +107,17 @@ public class TransactionQueryService {
                 .toList();
     }
 
+    /** The series the user has dismissed as false positives, keeping only the dismissed ones so
+     *  the UI can offer to restore them. */
+    public List<RecurringView> dismissedRecurring() {
+        Map<String, String> names = recurringNames.findAll();
+        Set<String> dismissed = recurringDismissals.findAll();
+        return recurringDetector.detect(visibleHistory()).stream()
+                .filter(s -> dismissed.contains(s.key()))
+                .map(s -> RecurringView.of(s, names))
+                .toList();
+    }
+
     /** Merchants the keyword map keeps missing, ranked by how often you have
      *  corrected them by hand. Transfers are excluded — moving money between
      *  your own accounts is not a merchant worth a keyword rule. */

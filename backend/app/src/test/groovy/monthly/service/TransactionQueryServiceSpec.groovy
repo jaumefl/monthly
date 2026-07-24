@@ -298,6 +298,39 @@ class TransactionQueryServiceSpec extends Specification {
         then:
         queryService.recurring()*.name() == ["Netflix Premium"]
     }
+    def "dismissedRecurring returns only the dismissed series, with its name"() {
+        given:
+        txRepo.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 5, 4), "SPOTIFY",      new BigDecimal("-5.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 4), "SPOTIFY",      new BigDecimal("-5.99"), "EUR", BankSource.REVOLUT),
+        ])
+        def netflixKey = queryService.recurring().find { it.label() == "netflix" }.key()
+        recurringNameRepo.set(netflixKey, "Netflix")
+        recurringDismissalRepo.dismiss(netflixKey)
+
+        when:
+        def dismissed = queryService.dismissedRecurring()
+
+        then: "only the dismissed series comes back, and it keeps its custom name"
+        dismissed*.label() == ["netflix"]
+        dismissed[0].name() == "Netflix"
+
+        and: "the active list no longer contains it"
+        queryService.recurring().every { it.label() != "netflix" }
+    }
+
+    def "dismissedRecurring is empty when nothing is dismissed"() {
+        given:
+        txRepo.saveAll([
+                new Transaction(LocalDate.of(2026, 5, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+                new Transaction(LocalDate.of(2026, 6, 3), "NETFLIX 8821", new BigDecimal("-9.99"), "EUR", BankSource.REVOLUT),
+        ])
+
+        expect:
+        queryService.dismissedRecurring().isEmpty()
+    }
     private BankStatementParser parserReturning(List<Transaction> txs) {
         Stub(BankStatementParser) {
             source() >> BankSource.SANTANDER
