@@ -515,6 +515,69 @@ async function dismissRecurring(key) {
     if (!res.ok) throw new Error(await res.text());
 }
 
+let dismissedOpen = false;
+
+function updateDismissedToggle() {
+    const n = $('dismissed-list').children.length;
+    $('dismissed-toggle-label').textContent =
+        `${dismissedOpen ? 'Hide' : 'Show'} dismissed (${n})`;
+    $('dismissed-list').hidden = !dismissedOpen;
+    $('dismissed-toggle').setAttribute('aria-expanded', String(dismissedOpen));
+    $('dismissed-toggle').classList.toggle('is-open', dismissedOpen);
+}
+
+function renderDismissed(series) {
+    const block = $('dismissed-block');
+    const list = $('dismissed-list');
+    list.innerHTML = '';
+    block.hidden = series.length === 0;
+    if (!series.length) { dismissedOpen = false; updateDismissedToggle(); return; }
+
+    series.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+
+    for (const s of series) {
+        const months = s.months.map(formatMonth).join(', ');
+        const li = document.createElement('li');
+        li.className = 'recurring-item recurring-item--dismissed';
+        li.dataset.key = s.key;
+        li.dataset.name = s.name;
+        li.innerHTML = `
+      <div class="recurring-item__row">
+        <span class="recurring-item__desc">${escapeHtml(s.name)}</span>
+        <span class="recurring-item__amount">${euro.format(s.amount)}</span>
+      </div>
+      <div class="recurring-item__meta">
+        <span class="pill">${s.months.length}×</span>
+        <span>${escapeHtml(s.source)}</span>
+        <span>·</span>
+        <span>${months}</span>
+        <button class="recurring-item__restore" type="button" aria-label="Restore">Restore</button>
+      </div>
+    `;
+        list.appendChild(li);
+    }
+    updateDismissedToggle();
+}
+
+async function loadDismissed() {
+    try {
+        const res = await fetch('/api/recurring/dismissed');
+        if (!res.ok) throw new Error(`Dismissed: ${res.status}`);
+        renderDismissed(await res.json());
+    } catch (err) {
+        console.error('Failed to load dismissed payments:', err);
+    }
+}
+
+async function restoreRecurring(key) {
+    const res = await fetch('/api/recurring/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+}
+
 /* Delegated so it survives list re-renders */
 $('recurring-list').addEventListener('click', async (e) => {
     const item = e.target.closest('.recurring-item');
@@ -542,9 +605,28 @@ $('recurring-list').addEventListener('click', async (e) => {
         try {
             await dismissRecurring(key);
             await loadRecurring();
+            await loadDismissed();
         } catch (err) {
             console.error('Dismiss failed:', err);
         }
+    }
+});
+
+$('dismissed-toggle').addEventListener('click', () => {
+    dismissedOpen = !dismissedOpen;
+    updateDismissedToggle();
+});
+
+$('dismissed-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.recurring-item__restore');
+    if (!btn) return;
+    const key = btn.closest('.recurring-item').dataset.key;
+    try {
+        await restoreRecurring(key);
+        await loadRecurring();
+        await loadDismissed();
+    } catch (err) {
+        console.error('Restore failed:', err);
     }
 });
 
@@ -554,3 +636,4 @@ $('recurring-list').addEventListener('click', async (e) => {
 initYearSelect();
 loadMonth();
 loadRecurring();
+loadDismissed();

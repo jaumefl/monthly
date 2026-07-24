@@ -127,6 +127,11 @@ public class App {
             return queryService.recurring();
         }, json::writeValueAsString);
 
+        http.get("/api/recurring/dismissed", (req, res) -> {
+            res.type("application/json");
+            return queryService.dismissedRecurring();
+        }, json::writeValueAsString);
+
         http.put("/api/recurring/name", (req, res) -> {
             res.type("application/json");
             RecurringNameRequest body = json.readValue(req.body(), RecurringNameRequest.class);
