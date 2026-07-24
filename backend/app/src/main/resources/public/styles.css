@@ -781,3 +781,22 @@ tbody tr:hover { background: var(--surface-hover); }
     cursor: pointer;
 }
 .recurring-item__delete:hover { color: var(--expense); background: var(--surface-subtle); }
+.recurring-dismissed__title {
+    margin: 16px 0 4px; font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border); padding-top: 12px;
+}
+.recurring-item--dismissed { opacity: 0.65; }
+.recurring-item--dismissed .recurring-item__desc { text-decoration: line-through; }
+.recurring-item__restore {
+    margin-left: auto;
+    font: inherit; font-size: 0.75rem; font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.recurring-item__restore:hover { color: var(--text); background: var(--surface-subtle); }
