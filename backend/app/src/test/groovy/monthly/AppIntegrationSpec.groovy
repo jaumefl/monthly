@@ -159,6 +159,16 @@ class AppIntegrationSpec extends Specification {
         new JsonSlurper().parseText(resp.body()) instanceof List
     }
 
+    def "the dismissed recurring endpoint returns a JSON array"() {
+        when:
+        def resp = get("/api/recurring/dismissed")
+
+        then:
+        resp.statusCode() == 200
+        resp.headers().firstValue("Content-Type").get().startsWith("application/json")
+        new JsonSlurper().parseText(resp.body()) instanceof List
+    }
+
 
     // HELPERS
 
