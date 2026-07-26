@@ -1,5 +1,6 @@
 # IDE
 .idea/
+.claude/
 
 # Bank data — never commit real exports
 data/

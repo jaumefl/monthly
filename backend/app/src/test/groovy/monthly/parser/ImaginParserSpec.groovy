@@ -76,4 +76,17 @@ class ImaginParserSpec extends Specification {
         expect:
         parser.source() == BankSource.IMAGINBANK
     }
+    def "parses dd/MM/yyyy dates as exported by imaginBank (slash separator, zero-padded)"() {
+        given:
+        def csv = '''Concepto;Tarjeta;Fecha;Importe
+Trading 212 EU GmbH;*6850;22/07/2026;-60,00EUR
+'''
+        when:
+        def txns = parser.parse(new ByteArrayInputStream(csv.getBytes("UTF-8")))
+
+        then:
+        txns.size() == 1
+        txns[0].operationDate() == LocalDate.of(2026, 7, 22)
+        txns[0].amount() == new BigDecimal("-60.00")
+    }
 }

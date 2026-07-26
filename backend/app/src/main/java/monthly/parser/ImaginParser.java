@@ -65,7 +65,8 @@ public class ImaginParser implements BankStatementParser {
                     continue;
                 }
 
-                LocalDate operationDate = LocalDate.parse(cols[COL_DATE].trim(), DATE_FORMAT);
+                String rawDate = cols[COL_DATE].trim().replace('/', '-');
+                LocalDate operationDate = LocalDate.parse(rawDate, DATE_FORMAT);
                 String description = cols[COL_DESCRIPTION].trim();
 
                 Matcher m = AMOUNT_FORMAT.matcher(cols[COL_AMOUNT].trim());
