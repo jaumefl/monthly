@@ -2,6 +2,7 @@ plugins {
     java
     groovy       // needed for Spock
     application
+    jacoco
 }
 
 repositories {
@@ -34,6 +35,15 @@ application {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }
 tasks.named<JavaExec>("run") {
     workingDir = rootProject.projectDir   // backend/ → so "data/..." resolves correctly
