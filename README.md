@@ -8,6 +8,12 @@ I built Monthly to solve a real problem of my own: I hold accounts across severa
 
 It's a single-user app that runs locally, and I've been developing it test-first with small, deliberate commits.
 
+## Screenshots
+
+| Monthly dashboard | Compare two months |
+| --- | --- |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Compare](docs/screenshots/compare.png) |
+
 ## What it does
 
 - **Imports statements from multiple banks.** Each bank gets its own parser behind a common interface, so Santander's `.xlsx` (Spanish formatted `DD/MM/YYYY` dates, comma decimals, junk metadata rows), Revolut's clean CSV, and imaginBank's CSV all end up as the same normalized `Transaction`.
